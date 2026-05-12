@@ -230,16 +230,34 @@ h1 span{color:var(--accent)}
 </style>
 </head>
 <body>
-<div class="copy-toast" id="copyToast">已複製！</div>
+<div class="copy-toast" id="copyToast"></div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-overlay" id="exportModal" style="display:none">
+  <div class="modal-box">
+    <h3>📤 匯出給老師或家長</h3>
+    <p id="exportInfo" style="color:var(--know);font-weight:700;margin-bottom:12px;"></p>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:8px;">複製以下代碼，傳給老師或家長：</p>
+    <textarea id="exportCode" readonly style="width:100%;height:80px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;font-size:.75rem;resize:none;font-family:monospace;"></textarea>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="btn-primary" onclick="copyExportCode()">📋 複製代碼</button>
+      <button class="btn-warn" onclick="confirmClearBatch()">✅ 已傳出，清空這幾天</button>
+      <button class="btn-secondary" onclick="closeExportModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- GENERAL MODAL -->
 <div class="modal-overlay" id="modalOverlay" style="display:none">
   <div class="modal-box"><h3 id="modalTitle"></h3><p id="modalMsg"></p><div class="modal-btns" id="modalBtns"></div></div>
 </div>
 
+<!-- NAV -->
 <nav class="global-nav">
   <button class="gnav-btn active" id="gnavHome" onclick="gotoHome()"><span class="icon">🏠</span><span>首頁</span></button>
   <button class="gnav-btn" id="gnavScan" onclick="gotoScan()"><span class="icon">⚡</span><span>快篩</span></button>
   <button class="gnav-btn" id="gnavNB" onclick="gotoNotebook()"><span class="icon">📖</span><span>錯題本</span></button>
-  <button class="gnav-btn" id="gnavReview" onclick="gotoReviewFromNav()"><span class="icon">🎯</span><span>複習測驗</span></button>
+  <button class="gnav-btn" id="gnavReview" onclick="gotoReviewFromNav()"><span class="icon">🎯</span><span>複習</span></button>
   <button class="gnav-btn" id="gnavAch" onclick="gotoAchievement()"><span class="icon">🏆</span><span>成就</span></button>
 </nav>
 
@@ -250,10 +268,17 @@ h1 span{color:var(--accent)}
   <div class="level-grid" id="levelGrid"></div>
   <button class="start-btn" id="startBtn" onclick="startScan()">開始快篩</button>
 
+  <!-- 匯出區 -->
+  <div class="section-block">
+    <div class="section-block-title">📤 傳給老師或家長</div>
+    <div id="batchInfo" style="font-size:.85rem;color:var(--text2);"></div>
+    <button class="review-start-btn" onclick="exportBatch()" style="margin-top:8px;">📤 匯出已勾選日期，給老師出考卷</button>
+  </div>
+
   <!-- 複習測驗 -->
   <div class="section-block">
     <div class="section-block-title">🎯 已掌握單字複習測驗</div>
-    <select class="review-level-select" id="reviewLevelSelect">
+    <select class="review-level-select" id="reviewLevelSelect" onchange="updateReviewBtn()">
       <option value="all">全部程度</option>
       <option value="2">Level 2</option>
       <option value="3">Level 3</option>
@@ -262,13 +287,13 @@ h1 span{color:var(--accent)}
       <option value="6">Level 6</option>
     </select>
     <div style="font-size:.78rem;color:var(--text2);margin-bottom:8px;">選擇題數：</div>
-    <div class="review-grid" id="reviewCountBtns">
+    <div class="review-grid">
       <button class="review-count-btn" onclick="selectReviewCount(50,this)">50 字</button>
       <button class="review-count-btn" onclick="selectReviewCount(100,this)">100 字</button>
       <button class="review-count-btn" onclick="selectReviewCount(150,this)">150 字</button>
       <button class="review-count-btn" onclick="selectReviewCount(200,this)">200 字</button>
     </div>
-    <button class="review-start-btn" id="reviewStartBtn" onclick="startReviewTest()" disabled>選擇題數後開始</button>
+    <button class="review-start-btn" id="reviewStartBtn" onclick="startReviewTest()" disabled style="margin-top:8px;">選擇題數後開始</button>
   </div>
 
   <!-- 重置 -->
@@ -288,53 +313,44 @@ h1 span{color:var(--accent)}
   <div class="guide-section">
     <h3>📋 使用說明</h3>
     <div class="guide-block">
-      <h4>⚡ 快篩功能</h4>
+      <h4>這個工具能幫你做什麼？</h4>
       <ul>
-        <li>在首頁選擇一個或多個程度（Level 2～6），按「開始快篩」</li>
-        <li>每張卡片顯示英文單字，按「✅ 我會，測我」會出現四選一中文驗證</li>
-        <li>四選一答對才算真正掌握，該字從快篩庫移除，下次不再出現</li>
-        <li>按「❌ 不會」直接加入錯題本，下次繼續出現</li>
-        <li>鍵盤快捷鍵：Z = 我會測我，X = 不會</li>
-        <li>累積 20 個錯題會自動提醒，可選擇先去背錯題本</li>
-        <li>答對的字數量會讓每個 Level 的剩餘字數越來越少</li>
+        <li>在最短時間內找出你「看過但想不起來」的單字——這正是大考最容易失分的地方</li>
+        <li>答對的字自動從題庫移除，字越背越少，剩下的全是真正的弱點</li>
+        <li>把你背會的字產出代碼傳給老師或家長，他們可以立刻出考卷驗收——你說你會，就來考你</li>
+      </ul>
+    </div>
+    <div class="guide-block">
+      <h4>⚡ 快篩</h4>
+      <ul>
+        <li>選程度 → 開始快篩 → 看英文自己判斷會不會</li>
+        <li>按「✅ 我會，測我」→ 出現四選一驗證，答對才算真正掌握</li>
+        <li>按「❌ 不會」→ 直接進錯題本，下次繼續出現</li>
+        <li>鍵盤：Z = 我會測我，X = 不會</li>
+      </ul>
+    </div>
+    <div class="guide-block">
+      <h4>📤 傳給老師或家長</h4>
+      <ul>
+        <li>首頁顯示每天背了幾個字，勾選日期後按「匯出」產出代碼</li>
+        <li>把代碼傳給老師或家長，貼入老師端工具即可出考卷</li>
+        <li>考完後清空那幾天，繼續累積下一批</li>
       </ul>
     </div>
     <div class="guide-block">
       <h4>📖 錯題本</h4>
       <ul>
-        <li>快篩中標記不會或驗證答錯的字，自動存入對應 Level 的錯題本</li>
-        <li>錯題本可按 Level 分頁瀏覽，每個字有發音 🔊、複製 📋、移除 ✕ 功能</li>
-        <li>複製格式為「中文 詞性 英文」，方便貼到其他地方</li>
-        <li>點「🎯 進入錯題測驗」可對錯題本的字進行四選一練習</li>
-        <li>錯題測驗結束後，可勾選已學會的字移出錯題本</li>
+        <li>最新答錯的字排最上面，再次答錯會再跳回頂端</li>
+        <li>勾選想要的字，一鍵複製「中文 詞性 英文」格式</li>
+        <li>每個字保留 🔊 發音，可進入四選一錯題測驗</li>
       </ul>
     </div>
     <div class="guide-block">
-      <h4>🎯 複習測驗</h4>
+      <h4>🎯 複習 ／ 🏆 成就 ／ 🔄 重置</h4>
       <ul>
-        <li>從「已掌握的字」中隨機抽取 50／100／150／200 字進行測驗</li>
-        <li>可選擇全部程度或單一程度</li>
-        <li>若掌握字數不足選定題數，會自動調整為現有最大數量</li>
-        <li>每次測驗結果會記錄在成就頁面</li>
-        <li>複習測驗答錯不影響掌握紀錄，僅供自我評估</li>
-      </ul>
-    </div>
-    <div class="guide-block">
-      <h4>🏆 成就紀錄</h4>
-      <ul>
-        <li>自動記錄每次快篩、錯題練習、複習測驗的日期與成績</li>
-        <li>顯示累計答對字數、總學習次數、當前掌握字總數</li>
-        <li>可在成就頁查看完整的學習歷程日誌</li>
-        <li>所有資料存在瀏覽器本機，同一台裝置不同時間都看得到</li>
-      </ul>
-    </div>
-    <div class="guide-block">
-      <h4>🔄 重置進度</h4>
-      <ul>
-        <li>可針對單一 Level 或全部程度重置「已掌握」的紀錄</li>
-        <li>重置需要三步確認，防止誤操作</li>
-        <li>重置後該 Level 的快篩庫恢復為全部字數</li>
-        <li>錯題本的紀錄不會因重置而消失，需另外手動移除</li>
+        <li>複習測驗：從已掌握的字隨機抽 50～200 字自我評估，不影響掌握紀錄</li>
+        <li>成就：記錄每次練習的日期、題數、答對幾字</li>
+        <li>重置：三步確認才執行，同時清空掌握紀錄與錯題本</li>
       </ul>
     </div>
   </div>
@@ -365,7 +381,7 @@ h1 span{color:var(--accent)}
     <button class="action-btn know-btn" id="knowBtn" onclick="markKnow()">✅ 我會，測我<span class="kb">[Z]</span></button>
     <button class="action-btn notebook-btn" onclick="gotoNotebook()" title="錯題本">📖</button>
   </div>
-  <div class="hint">按「我會，測我」出現四選一；答對才算掌握，字庫才會減少</div>
+  <div class="hint">答對四選一才算掌握，字庫才會減少</div>
 </div>
 
 <!-- ══ RESULT ══ -->
@@ -392,13 +408,13 @@ h1 span{color:var(--accent)}
   <button class="drill-next" id="drillNext" onclick="nextDrill()" style="display:none">下一題 →</button>
 </div>
 
-<!-- ══ DRILL RESULT ══ -->
+<!-- ══ DRILL / REVIEW RESULT ══ -->
 <div id="drillResult" class="screen">
   <div class="drill-result">
     <h2 id="drillResultTitle">練習完成 🏆</h2>
     <p id="drillResultSub"></p>
     <div id="drillResultExtra"></div>
-    <p class="section-title" style="margin-top:8px" id="drillCheckLabel">勾選要「移出錯題本」的單字：</p>
+    <p class="section-title" style="margin-top:8px" id="drillCheckLabel"></p>
     <div class="word-check-list" id="wordCheckList"></div>
     <div class="drill-result-btns" id="drillResultBtns"></div>
   </div>
@@ -408,6 +424,14 @@ h1 span{color:var(--accent)}
 <div id="notebook" class="screen">
   <div class="nb-header"><h2>📖 錯題本</h2><span class="nb-count" id="nbTotalCount"></span></div>
   <div class="nb-level-tabs" id="nbTabs"></div>
+
+  <!-- 複製工具列 -->
+  <div id="nbCopyBar" style="display:none;gap:8px;width:100%;margin-bottom:10px;flex-wrap:wrap;">
+    <button onclick="nbSelectAll(true)" style="flex:1;min-width:80px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px;font-size:.78rem;cursor:pointer;">☑ 全選</button>
+    <button onclick="nbSelectAll(false)" style="flex:1;min-width:80px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px;font-size:.78rem;cursor:pointer;">☐ 全不選</button>
+    <button onclick="nbCopyChecked()" style="flex:2;min-width:120px;background:#1a2a1a;border:2px solid var(--know);color:var(--know);border-radius:8px;padding:8px;font-size:.82rem;font-weight:700;cursor:pointer;">📋 複製已勾選的字</button>
+  </div>
+
   <div id="nbWordList" class="word-list"></div>
   <button class="nb-practice-btn" id="nbPracticeBtn" onclick="startNBDrill()">🎯 進入錯題測驗</button>
   <button class="back-link" onclick="gotoHome()">← 返回首頁</button>
@@ -446,35 +470,99 @@ var selLv=new Set();
 var queue=[],idx=0,counts={know:0,unknown:0},scanLevels=[];
 var qTimer=null,qActive=false,qCorrect='';
 var dQueue=[],dIdx=0,dScore={c:0,total:0},dWord=null;
-var drillWordResults=[],drillFromNB=false,drillNBLevel=null,drillIsReview=false;
+var drillWordResults=[],drillFromNB=false,drillNBLevel=null;
 var nbActiveLevel=null;
 var reviewCount=0,reviewQueue=[],reviewIdx=0,reviewScore={c:0,total:0},reviewWord=null;
 var reviewWordResults=[];
 
-/* ═══════ STORAGE: NOTEBOOK ═══════ */
-function getNB(lv){try{var s=localStorage.getItem('nb_lv'+lv);return s?JSON.parse(s):[];}catch(e){return[];}}
+/* ═══════ STORAGE: NOTEBOOK (帶時間戳) ═══════ */
+function getNB(lv){
+  try{var s=localStorage.getItem('nb_lv'+lv);return s?JSON.parse(s):[];}
+  catch(e){return[];}
+}
 function setNB(lv,a){try{localStorage.setItem('nb_lv'+lv,JSON.stringify(a));}catch(e){}}
-function addToNB(lv,w){var a=getNB(lv);if(!a.find(function(x){return x.en===w.en;})){a.push(w);setNB(lv,a);}}
+function addToNB(lv,w){
+  var a=getNB(lv);
+  var now=Date.now();
+  // 若已存在，移到最上面（更新時間戳）
+  a=a.filter(function(x){return x.en!==w.en;});
+  var entry=Object.assign({},w,{addedTs:now});
+  a.unshift(entry); // 最新的放最前面
+  setNB(lv,a);
+}
 function removeFromNB(lv,en){setNB(lv,getNB(lv).filter(function(w){return w.en!==en;}));}
 function getAllNBCount(){return [2,3,4,5,6].reduce(function(s,lv){return s+getNB(lv).length;},0);}
 
 /* ═══════ STORAGE: MASTERED ═══════ */
 function getMastered(lv){try{var s=localStorage.getItem('mastered_lv'+lv);return s?JSON.parse(s):[];}catch(e){return[];}}
 function setMastered(lv,a){try{localStorage.setItem('mastered_lv'+lv,JSON.stringify(a));}catch(e){}}
-function addMastered(lv,en){var a=getMastered(lv);if(a.indexOf(en)===-1){a.push(en);setMastered(lv,a);}}
+function addMastered(lv,en){
+  var a=getMastered(lv);
+  if(a.indexOf(en)===-1){a.push(en);setMastered(lv,a);}
+  addToBatch(en,lv);
+}
 function resetMastered(lv){try{localStorage.removeItem('mastered_lv'+lv);}catch(e){}}
 function getAllMasteredCount(){return [2,3,4,5,6].reduce(function(s,lv){return s+getMastered(lv).length;},0);}
 function getRemainingWords(lv){var m=getMastered(lv);return allWords.filter(function(w){return w.level===lv&&m.indexOf(w.en)===-1;});}
 function getRemainingCount(lv){return getRemainingWords(lv).length;}
 function getMasteredWords(lv){var m=getMastered(lv);return allWords.filter(function(w){return w.level===lv&&m.indexOf(w.en)!==-1;});}
 
-/* ═══════ STORAGE: ACHIEVEMENT LOG ═══════ */
+/* ═══════ STORAGE: BATCH (按日期分組) ═══════ */
+function getBatchData(){
+  try{var s=localStorage.getItem('batch_data');return s?JSON.parse(s):{days:{}};}
+  catch(e){return{days:{}};}
+}
+function saveBatchData(d){try{localStorage.setItem('batch_data',JSON.stringify(d));}catch(e){}}
+function getTodayStr(){
+  var now=new Date();
+  return now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0');
+}
+function addToBatch(en,level){
+  var d=getBatchData();
+  var today=getTodayStr();
+  if(!d.days[today])d.days[today]=[];
+  var word=allWords.find(function(w){return w.en===en&&w.level===level;});
+  if(word&&!d.days[today].find(function(w){return w.en===en;})){
+    d.days[today].push(word);
+    saveBatchData(d);
+  }
+}
+function clearBatchDays(days){
+  var d=getBatchData();
+  days.forEach(function(day){delete d.days[day];});
+  saveBatchData(d);
+}
+function getBatchDays(){
+  var d=getBatchData();
+  return Object.keys(d.days).sort().reverse(); // 最新在前
+}
+function getBatchWordsByDays(days){
+  var d=getBatchData();
+  var words=[];
+  var seen=new Set();
+  days.forEach(function(day){
+    if(d.days[day]){
+      d.days[day].forEach(function(w){
+        if(!seen.has(w.en)){seen.add(w.en);words.push(w);}
+      });
+    }
+  });
+  return words;
+}
+function getTotalBatchCount(){
+  var d=getBatchData();
+  var seen=new Set();
+  Object.values(d.days).forEach(function(arr){arr.forEach(function(w){seen.add(w.en);});});
+  return seen.size;
+}
+
+/* ═══════ STORAGE: LOG ═══════ */
 function getLog(){try{var s=localStorage.getItem('ach_log');return s?JSON.parse(s):[];}catch(e){return[];}}
 function saveLog(arr){try{localStorage.setItem('ach_log',JSON.stringify(arr));}catch(e){}}
 function addLog(type,detail,score){
   var log=getLog();
   var now=new Date();
-  var dateStr=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0');
+  var dateStr=getTodayStr();
   var timeStr=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
   log.unshift({type:type,detail:detail,score:score,date:dateStr,time:timeStr,ts:now.getTime()});
   if(log.length>200)log=log.slice(0,200);
@@ -486,6 +574,7 @@ function getTotalCorrect(){return getLog().reduce(function(s,e){return s+(e.scor
 window.onload=function(){
   allWords=JSON.parse(document.getElementById('wdata').textContent);
   buildGrid();
+  updateBatchInfo();
   document.addEventListener('keydown',onKey);
 };
 
@@ -499,9 +588,7 @@ function buildGrid(){
     var rem=getRemainingCount(lv),tot=allWords.filter(function(w){return w.level===lv;}).length;
     g.appendChild(mkBtn('Level '+lv,'lv'+lv,rem,tot,function(){toggleOne(lv);}));
   });
-  updateLevelBadges();
-  syncStart();
-  updateReviewBtn();
+  updateLevelBadges();syncStart();updateReviewBtn();
 }
 function mkBtn(label,id,rem,tot,fn){
   var b=document.createElement('button');b.className='level-btn';b.id=id;
@@ -541,8 +628,87 @@ function updateReviewBtn(){
 function selectReviewCount(n,el){
   reviewCount=n;
   document.querySelectorAll('.review-count-btn').forEach(function(b){b.classList.remove('selected');});
-  el.classList.add('selected');
-  updateReviewBtn();
+  el.classList.add('selected');updateReviewBtn();
+}
+
+/* ═══════ BATCH INFO & EXPORT ═══════ */
+function updateBatchInfo(){
+  var el=document.getElementById('batchInfo');if(!el)return;
+  var days=getBatchDays();
+  var total=getTotalBatchCount();
+  if(days.length===0){
+    el.innerHTML='目前尚無已掌握的字，快去快篩吧！';
+    return;
+  }
+  var d=getBatchData();
+  var html='<div style="font-size:.82rem;color:var(--text2);margin-bottom:8px;">共累積 <strong style="color:var(--know)">'+total+' 個字</strong>，勾選要匯出的日期：</div>';
+  html+='<div style="margin-bottom:10px;">';
+  // 全選按鈕
+  html+='<div style="display:flex;gap:8px;margin-bottom:8px;">'+
+    '<button onclick="toggleAllDays(true)" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:6px;font-size:.75rem;cursor:pointer;">全選</button>'+
+    '<button onclick="toggleAllDays(false)" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:6px;font-size:.75rem;cursor:pointer;">全不選</button>'+
+    '</div>';
+  days.forEach(function(day){
+    var cnt=d.days[day]?d.days[day].length:0;
+    html+='<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border-radius:8px;margin-bottom:4px;cursor:pointer;border:1px solid var(--border);">'+
+      '<input type="checkbox" class="day-checkbox" data-day="'+day+'" checked style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">'+
+      '<span style="flex:1;font-size:.85rem;">'+day+'</span>'+
+      '<span style="font-size:.78rem;color:var(--know);font-weight:700;">'+cnt+' 字</span>'+
+      '</label>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+function toggleAllDays(checked){
+  document.querySelectorAll('.day-checkbox').forEach(function(cb){cb.checked=checked;});
+}
+function getSelectedDays(){
+  var days=[];
+  document.querySelectorAll('.day-checkbox:checked').forEach(function(cb){days.push(cb.getAttribute('data-day'));});
+  return days;
+}
+function exportBatch(){
+  var days=getSelectedDays();
+  if(days.length===0){
+    showModal('未選擇日期','請至少勾選一個日期再匯出。',[{label:'確定',cls:'btn-primary',fn:closeModal}]);
+    return;
+  }
+  var words=getBatchWordsByDays(days);
+  if(words.length===0){
+    showModal('沒有單字','所選日期沒有已掌握的單字。',[{label:'確定',cls:'btn-primary',fn:closeModal}]);
+    return;
+  }
+  days.sort();
+  var payload={v:2,startDate:days[0],endDate:days[days.length-1],days:days,words:words};
+  var code=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  document.getElementById('exportCode').value=code;
+  document.getElementById('exportInfo').textContent=
+    '共 '+words.length+' 個字　日期：'+days[0]+' ～ '+days[days.length-1];
+  document.getElementById('exportModal').style.display='flex';
+}
+function copyExportCode(){
+  var code=document.getElementById('exportCode').value;
+  if(navigator.clipboard)navigator.clipboard.writeText(code).then(function(){showToast('代碼已複製！傳給老師或家長吧 📤');});
+  else{var t=document.getElementById('exportCode');t.select();document.execCommand('copy');showToast('代碼已複製！');}
+}
+function closeExportModal(){document.getElementById('exportModal').style.display='none';}
+function confirmClearBatch(){
+  closeExportModal();
+  var days=getSelectedDays();
+  var words=getBatchWordsByDays(days);
+  showModal(
+    '確認清空已選日期？',
+    '將清空 '+days.length+' 個日期共 '+words.length+' 個字的待考紀錄。\n\n請確認已把代碼傳給老師或家長，考完之後再清空。',
+    [
+      {label:'取消，還沒傳',cls:'btn-primary',fn:closeModal},
+      {label:'確定清空',cls:'btn-warn',fn:function(){
+        closeModal();
+        clearBatchDays(days);
+        showToast('已清空！');
+        updateBatchInfo();
+      }}
+    ]
+  );
 }
 
 /* ═══════ NAV ═══════ */
@@ -555,7 +721,7 @@ function showScreen(id){
            reviewTest:'gnavReview',achievement:'gnavAch'};
   if(map[id])document.getElementById(map[id]).classList.add('active');
 }
-function gotoHome(){clearInterval(qTimer);qActive=false;buildGrid();showScreen('home');}
+function gotoHome(){clearInterval(qTimer);qActive=false;buildGrid();updateBatchInfo();showScreen('home');}
 function gotoScan(){if(idx>0&&idx<queue.length)showScreen('scan');else gotoHome();}
 function gotoNotebook(){buildNotebook();showScreen('notebook');}
 function gotoReviewFromNav(){showScreen('home');setTimeout(function(){var el=document.querySelector('.section-block');if(el)el.scrollIntoView({behavior:'smooth'});},100);}
@@ -619,7 +785,7 @@ function triggerQuiz(w){
   document.getElementById('quizView').classList.add('show');
   var bar=document.getElementById('quizBar');bar.style.width='100%';
   clearInterval(qTimer);var pct=100;
-  qTimer=setInterval(function(){pct-=2;bar.style.width=Math.max(0,pct)+'%';if(pct<=0){clearInterval(qTimer);timeoutQuiz(w);}},100);
+  qTimer=setInterval(function(){pct-=3.334;bar.style.width=Math.max(0,pct)+'%';if(pct<=0){clearInterval(qTimer);timeoutQuiz(w);}},100);
 }
 function answerQuiz(ans,btn,w){
   clearInterval(qTimer);var ok=ans===qCorrect;
@@ -652,25 +818,22 @@ function showResult(){
   });
   var allNB=[];scanLevels.forEach(function(lv){allNB=allNB.concat(getNB(lv));});
   document.getElementById('drillBtn').disabled=allNB.length===0;
-  // Log
-  if(counts.know>0||counts.unknown>0){
-    addLog('scan','快篩 Level '+scanLevels.join(',')+' · 共 '+total+' 字',counts.know);
-  }
+  if(counts.know>0||counts.unknown>0)addLog('scan','快篩 Level '+scanLevels.join(',')+' · 共 '+total+' 字',counts.know);
   showScreen('result');
   setTimeout(function(){document.querySelectorAll('.result-bar-fill').forEach(function(el){el.style.width=el.dataset.pct+'%';});},100);
-  updateLevelBadges();
+  updateLevelBadges();updateBatchInfo();
 }
 
-/* ═══════ DRILL (錯題 or 複習) ═══════ */
+/* ═══════ DRILL ═══════ */
 function startDrill(){
   var words=[];scanLevels.forEach(function(lv){words=words.concat(getNB(lv));});
   if(words.length===0)return;
-  drillFromNB=false;drillNBLevel=null;drillIsReview=false;
+  drillFromNB=false;drillNBLevel=null;
   runDrill(words,'錯題本練習');
 }
 function startNBDrill(){
   var words=getNB(nbActiveLevel);if(words.length===0)return;
-  drillFromNB=true;drillNBLevel=nbActiveLevel;drillIsReview=false;
+  drillFromNB=true;drillNBLevel=nbActiveLevel;
   runDrill(words,'錯題本練習');
 }
 function runDrill(words,title){
@@ -713,7 +876,6 @@ function showDrillResult(){
   document.getElementById('drillResultExtra').innerHTML='';
   document.getElementById('drillCheckLabel').textContent='勾選要「移出錯題本」的單字：';
   document.getElementById('drillCheckLabel').style.display='';
-
   var seen={};drillWordResults.forEach(function(r){seen[r.word.en]=r;});
   var unique=Object.values(seen);
   var list=document.getElementById('wordCheckList');list.innerHTML='';
@@ -724,14 +886,13 @@ function showDrillResult(){
       '<span class="word-check-result '+(r.correct?'correct':'wrong')+'">'+(r.correct?'答對':'答錯')+'</span>';
     list.appendChild(row);
   });
-
   var btns=document.getElementById('drillResultBtns');btns.innerHTML='';
-  var b1=document.createElement('button');b1.className='btn-primary';b1.textContent='✅ 移出已勾選的字';b1.onclick=removeCheckedFromNB;btns.appendChild(b1);
-  var b2=document.createElement('button');b2.className='btn-secondary';b2.textContent='🏠 回首頁';b2.onclick=gotoHome;btns.appendChild(b2);
-  var b3=document.createElement('button');b3.className='btn-secondary';b3.textContent='📖 回錯題本';b3.onclick=showNotebookFromDrillResult;btns.appendChild(b3);
-
+  addBtn(btns,'✅ 移出已勾選的字','btn-primary',removeCheckedFromNB);
+  addBtn(btns,'🏠 回首頁','btn-secondary',gotoHome);
+  addBtn(btns,'📖 回錯題本','btn-secondary',showNotebookFromDrillResult);
   showScreen('drillResult');updateLevelBadges();
 }
+function addBtn(container,text,cls,fn){var b=document.createElement('button');b.className=cls;b.textContent=text;b.onclick=fn;container.appendChild(b);}
 function removeCheckedFromNB(){
   document.querySelectorAll('#wordCheckList input:checked').forEach(function(cb){
     removeFromNB(parseInt(cb.getAttribute('data-lv')),cb.getAttribute('data-en'));
@@ -746,9 +907,7 @@ function showNotebookFromDrillResult(){buildNotebook(drillNBLevel);showScreen('n
 /* ═══════ REVIEW TEST ═══════ */
 function startReviewTest(){
   var lv=document.getElementById('reviewLevelSelect').value;
-  var words=lv==='all'?
-    [2,3,4,5,6].reduce(function(a,l){return a.concat(getMasteredWords(l));},[]): 
-    getMasteredWords(parseInt(lv));
+  var words=lv==='all'?[2,3,4,5,6].reduce(function(a,l){return a.concat(getMasteredWords(l));},[]): getMasteredWords(parseInt(lv));
   if(words.length===0){showModal('尚無已掌握的字','請先進行快篩並答對單字，才能使用複習測驗功能。',[{label:'確定',cls:'btn-primary',fn:closeModal}]);return;}
   var take=Math.min(reviewCount,words.length);
   reviewQueue=shuffle(words).slice(0,take);
@@ -784,20 +943,16 @@ function answerReview(ans,btn){
 }
 function nextReview(){reviewIdx++;renderReview();}
 function speakReview(){if(reviewWord)speakText(reviewWord.en);}
-
 function showReviewResult(){
   var lv=document.getElementById('reviewLevelSelect').value;
   var lvLabel=lv==='all'?'全部程度':'Level '+lv;
   var pct=Math.round(reviewScore.c/reviewScore.total*100);
   addLog('review','複習測驗 '+lvLabel+' · '+reviewScore.total+' 字 · 正確率 '+pct+'%',reviewScore.c);
-
   document.getElementById('drillResultTitle').textContent='複習完成 🎯';
   document.getElementById('drillResultSub').textContent='答對 '+reviewScore.c+' / '+reviewScore.total+' （正確率 '+pct+'%）';
   document.getElementById('drillResultExtra').innerHTML=
-    '<div style="font-size:.82rem;color:var(--text2);margin-bottom:12px;padding:10px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">'+
-    '複習測驗不影響掌握紀錄，答錯的字仍保持已掌握狀態。</div>';
+    '<div style="font-size:.82rem;color:var(--text2);margin-bottom:12px;padding:10px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">複習測驗不影響掌握紀錄，答錯的字仍保持已掌握狀態。</div>';
   document.getElementById('drillCheckLabel').style.display='none';
-
   var list=document.getElementById('wordCheckList');list.innerHTML='';
   reviewWordResults.forEach(function(r){
     var row=document.createElement('div');row.className='word-check-row';
@@ -805,35 +960,28 @@ function showReviewResult(){
       '<span class="word-check-result '+(r.correct?'correct':'wrong')+'">'+(r.correct?'答對':'答錯')+'</span>';
     list.appendChild(row);
   });
-
   var btns=document.getElementById('drillResultBtns');btns.innerHTML='';
-  var b1=document.createElement('button');b1.className='btn-know';b1.textContent='🎯 再來一次';b1.onclick=function(){startReviewTest();};btns.appendChild(b1);
-  var b2=document.createElement('button');b2.className='btn-secondary';b2.textContent='🏠 回首頁';b2.onclick=gotoHome;btns.appendChild(b2);
-  var b3=document.createElement('button');b3.className='btn-primary';b3.textContent='🏆 查看成就';b3.onclick=gotoAchievement;btns.appendChild(b3);
-
+  addBtn(btns,'🎯 再來一次','btn-know',startReviewTest);
+  addBtn(btns,'🏠 回首頁','btn-secondary',gotoHome);
+  addBtn(btns,'🏆 查看成就','btn-primary',gotoAchievement);
   showScreen('drillResult');
 }
 
 /* ═══════ ACHIEVEMENT ═══════ */
 function buildAchievement(){
   var log=getLog();
-  var totalCorrect=getTotalCorrect();
-  var totalSessions=log.length;
-  var totalMastered=getAllMasteredCount();
-
-  var sum=document.getElementById('achSummary');sum.innerHTML=
-    '<div class="ach-card"><div class="ach-num">'+totalMastered+'</div><div class="ach-lbl">目前掌握字數</div></div>'+
-    '<div class="ach-card"><div class="ach-num">'+totalCorrect+'</div><div class="ach-lbl">累計答對字數</div></div>'+
-    '<div class="ach-card"><div class="ach-num">'+totalSessions+'</div><div class="ach-lbl">累計學習次數</div></div>';
-
+  var sum=document.getElementById('achSummary');
+  sum.innerHTML=
+    '<div class="ach-card"><div class="ach-num">'+getAllMasteredCount()+'</div><div class="ach-lbl">目前掌握字數</div></div>'+
+    '<div class="ach-card"><div class="ach-num">'+getTotalBatchCount()+'</div><div class="ach-lbl">累積待考字數</div></div>'+
+    '<div class="ach-card"><div class="ach-num">'+getTotalCorrect()+'</div><div class="ach-lbl">累計答對字數</div></div>';
   var ll=document.getElementById('achLogList');ll.innerHTML='';
   if(log.length===0){ll.innerHTML='<div class="ach-empty">還沒有學習紀錄，快去開始快篩吧！⚡</div>';return;}
   log.forEach(function(e){
     var row=document.createElement('div');row.className='ach-log-row';
     var typeMap={scan:{label:'快篩',cls:'scan'},review:{label:'複習',cls:'review'},drill:{label:'錯題',cls:'drill'}};
     var t=typeMap[e.type]||{label:'其他',cls:'scan'};
-    row.innerHTML=
-      '<div class="ach-log-date">'+e.date+'<br><span style="font-size:.7rem">'+e.time+'</span></div>'+
+    row.innerHTML='<div class="ach-log-date">'+e.date+'<br><span style="font-size:.7rem">'+e.time+'</span></div>'+
       '<div class="ach-log-detail"><div class="ach-log-main">'+e.detail+'</div><div class="ach-log-sub">答對 '+e.score+' 字</div></div>'+
       '<span class="ach-log-badge '+t.cls+'">'+t.label+'</span>';
     ll.appendChild(row);
@@ -855,12 +1003,16 @@ function confirmReset2(level,name){
   showModal('最後確認 — 無法復原','這是最後一次確認，重置後無法復原。',
     [{label:'算了，不要',cls:'btn-primary',fn:closeModal},{label:'✅ 確定重置',cls:'btn-warn',fn:function(){doReset(level);}}]);
 }
+function clearNB(level){
+  if(level){setNB(level,[]);}
+  else [2,3,4,5,6].forEach(function(lv){setNB(lv,[]);});
+}
 function doReset(level){
   closeModal();
-  if(level)resetMastered(level);
-  else [2,3,4,5,6].forEach(function(lv){resetMastered(lv);});
-  showToast((level?'Level '+level:'所有程度')+' 已重置 🔄');
-  buildGrid();
+  if(level){resetMastered(level);clearNB(level);}
+  else{[2,3,4,5,6].forEach(function(lv){resetMastered(lv);clearNB(lv);});}
+  showToast((level?'Level '+level:'所有程度')+' 已重置（含錯題本）🔄');
+  buildGrid();updateLevelBadges();
 }
 
 /* ═══════ NOTEBOOK ═══════ */
@@ -891,22 +1043,53 @@ function setActiveTab(el){document.querySelectorAll('.nb-tab').forEach(function(
 function renderNBTab(level){
   nbActiveLevel=level;
   var words=level==null?[2,3,4,5,6].reduce(function(a,lv){return a.concat(getNB(lv));},[]): getNB(level);
+  // 已按 addedTs 排序（最新在前，addToNB 時用 unshift）
   var list=document.getElementById('nbWordList');list.innerHTML='';
-  if(words.length===0){list.innerHTML='<div class="nb-empty">這個程度目前沒有錯題 🎉</div>';document.getElementById('nbPracticeBtn').disabled=true;return;}
+  if(words.length===0){
+    list.innerHTML='<div class="nb-empty">這個程度目前沒有錯題 🎉</div>';
+    document.getElementById('nbPracticeBtn').disabled=true;
+    renderNBCopyBar([]);
+    return;
+  }
   document.getElementById('nbPracticeBtn').disabled=false;
+  renderNBCopyBar(words);
   words.forEach(function(w){
     var row=document.createElement('div');row.className='word-row';
-    row.innerHTML='<div class="word-row-info"><div class="word-row-en">'+w.en+'</div><div><span class="word-row-pos">'+w.pos+'</span> <span class="word-row-zh">'+w.zh+'</span></div></div>'+
+    row.innerHTML=
+      '<input type="checkbox" class="nb-check" data-en="'+escJs(w.en)+'" data-pos="'+escJs(w.pos)+'" data-zh="'+escJs(w.zh)+'" checked style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">'+
+      '<div class="word-row-info">'+
+        '<div class="word-row-en">'+w.en+'</div>'+
+        '<div><span class="word-row-pos">'+w.pos+'</span> <span class="word-row-zh">'+w.zh+'</span></div>'+
+      '</div>'+
       '<div class="word-row-btns">'+
-      '<button class="icon-btn" onclick="speakText(\''+escJs(w.en)+'\')">🔊</button>'+
-      '<button class="icon-btn" onclick="copyWord(\''+escJs(w.zh)+' '+escJs(w.pos)+' '+escJs(w.en)+'\')">📋</button>'+
-      '<button class="icon-btn del" onclick="removeWordFromNB('+w.level+',\''+escJs(w.en)+'\')">✕</button>'+
+        '<button class="icon-btn" onclick="speakText(\''+escJs(w.en)+'\')">🔊</button>'+
+        '<button class="icon-btn" onclick="copyWord(\''+escJs(w.zh)+' '+escJs(w.pos)+' '+escJs(w.en)+'\')">📋</button>'+
+        '<button class="icon-btn del" onclick="removeWordFromNB('+w.level+',\''+escJs(w.en)+'\')">✕</button>'+
       '</div>';
     list.appendChild(row);
   });
   document.getElementById('nbTotalCount').textContent='共 '+getAllNBCount()+' 字';
 }
-function escJs(s){return s.replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+function renderNBCopyBar(words){
+  var bar=document.getElementById('nbCopyBar');
+  if(!bar)return;
+  if(words.length===0){bar.style.display='none';return;}
+  bar.style.display='flex';
+}
+function nbSelectAll(checked){
+  document.querySelectorAll('.nb-check').forEach(function(cb){cb.checked=checked;});
+}
+function nbCopyChecked(){
+  var lines=[];
+  document.querySelectorAll('.nb-check:checked').forEach(function(cb){
+    lines.push(cb.getAttribute('data-zh')+' '+cb.getAttribute('data-pos')+' '+cb.getAttribute('data-en'));
+  });
+  if(lines.length===0){showToast('請先勾選要複製的字');return;}
+  var text=lines.join('\n');
+  if(navigator.clipboard)navigator.clipboard.writeText(text).then(function(){showToast('已複製 '+lines.length+' 個字 📋');});
+  else{var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('已複製 '+lines.length+' 個字 📋');}
+}
+function escJs(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 function removeWordFromNB(lv,en){removeFromNB(lv,en);updateLevelBadges();buildNotebook(nbActiveLevel);}
 function copyWord(text){
   if(navigator.clipboard)navigator.clipboard.writeText(text).then(function(){showToast('已複製！');});
@@ -922,7 +1105,7 @@ function showModal(title,msg,btns){
   document.getElementById('modalOverlay').style.display='flex';
 }
 function closeModal(){document.getElementById('modalOverlay').style.display='none';}
-function showToast(msg){var t=document.getElementById('copyToast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2000);}
+function showToast(msg){var t=document.getElementById('copyToast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 
 /* ═══════ TTS ═══════ */
 function speakText(t){if(!window.speechSynthesis)return;var u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=0.85;speechSynthesis.cancel();speechSynthesis.speak(u);}
@@ -931,8 +1114,9 @@ function speakText(t){if(!window.speechSynthesis)return;var u=new SpeechSynthesi
 function onKey(e){
   var a=document.querySelector('.screen.active');if(!a)return;
   if(a.id==='scan'&&!qActive){if(e.key==='z'||e.key==='Z')markKnow();if(e.key==='x'||e.key==='X')markUnknown();}
-  if((a.id==='drill'||a.id==='reviewTest')){
-    if((e.key==='Enter'||e.key===' ')&&document.getElementById(a.id==='drill'?'drillNext':'reviewNext').style.display!=='none'){
+  if(a.id==='drill'||a.id==='reviewTest'){
+    var nextBtn=document.getElementById(a.id==='drill'?'drillNext':'reviewNext');
+    if((e.key==='Enter'||e.key===' ')&&nextBtn&&nextBtn.style.display!=='none'){
       if(a.id==='drill')nextDrill();else nextReview();
     }
   }
