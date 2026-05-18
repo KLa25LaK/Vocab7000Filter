@@ -498,6 +498,13 @@ h1 span{color:var(--accent)}
 <div id="achievement" class="screen">
   <div class="ach-header"><h2>🏆 學習成就</h2></div>
   <div class="ach-summary" id="achSummary"></div>
+
+  <!-- 排行榜 -->
+  <div style="width:100%;margin-bottom:16px;">
+    <div class="ach-log-title">🌍 全球排行榜</div>
+    <div id="leaderboardSection"></div>
+  </div>
+
   <div class="ach-log-title">📅 學習日誌</div>
   <div class="ach-log-list" id="achLogList"></div>
   <button class="back-link" onclick="gotoHome()">← 返回首頁</button>
@@ -570,6 +577,9 @@ h1 span{color:var(--accent)}
   </div>
 </div>
 <script>
+
+
+
 
 
 
@@ -854,6 +864,82 @@ function setOptFontSizes(container){
   });
 }
 
+
+/* ═══════ FIREBASE REST API ═══════ */
+var FB_URL='https://vocab7000-8ad19-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+function initFirebase(){
+  // 記錄這台裝置（避免重複計算）
+  if(!localStorage.getItem('fb_registered')){
+    fbRestGet('stats/totalUsers').then(function(val){
+      var newVal=(val||0)+1;
+      return fbRestPut('stats/totalUsers',newVal);
+    }).then(function(){
+      localStorage.setItem('fb_registered','1');
+    }).catch(function(e){console.log('FB register error:',e);});
+  }
+}
+
+function fbRestGet(path){
+  return fetch(FB_URL+'/'+path+'.json')
+    .then(function(r){return r.json();});
+}
+
+function fbRestPut(path,data){
+  return fetch(FB_URL+'/'+path+'.json',{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(data)
+  }).then(function(r){return r.json();});
+}
+
+function fbRestPost(path,data){
+  return fetch(FB_URL+'/'+path+'.json',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(data)
+  }).then(function(r){return r.json();});
+}
+
+function fbCheckMilestone(level){
+  var mastered=getMastered(level).length;
+  var milestones=[100,300,500,700,900,1080];
+  var key='fb_milestone_lv'+level;
+  var done=parseInt(localStorage.getItem(key)||'0');
+  milestones.forEach(function(m){
+    if(mastered>=m && done<m){
+      localStorage.setItem(key,m);
+      setTimeout(function(){
+        var name=prompt('恭喜！你已掌握 Level '+level+' 的 '+m+' 個字！輸入名字加入排行榜（可留空跳過）：');
+        if(name&&name.trim()){
+          fbAddToLeaderboard(name.trim(),level,m);
+        }
+      },500);
+    }
+  });
+}
+
+function fbAddToLeaderboard(name,level,milestone){
+  var entry={name:name,level:level,milestone:milestone,date:getTodayStr(),ts:Date.now()};
+  fbRestPost('leaderboard',entry)
+    .then(function(){showToast('🏆 已登記到排行榜！');})
+    .catch(function(e){console.log('FB leaderboard error:',e);});
+}
+
+function fbGetStats(callback){
+  Promise.all([
+    fbRestGet('stats/totalUsers'),
+    fbRestGet('leaderboard')
+  ]).then(function(results){
+    var total=results[0]||0;
+    var raw=results[1]||{};
+    var board=Object.values(raw).sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+    callback({total:total,board:board});
+  }).catch(function(){
+    callback({total:0,board:[]});
+  });
+}
+
 /* ═══════ STORAGE: NOTEBOOK (帶時間戳) ═══════ */
 function getNB(lv){
   try{var s=localStorage.getItem('nb_lv'+lv);return s?JSON.parse(s):[];}
@@ -879,6 +965,7 @@ function addMastered(lv,en){
   var a=getMastered(lv);
   if(a.indexOf(en)===-1){a.push(en);setMastered(lv,a);}
   addToBatch(en,lv);
+  fbCheckMilestone(lv);
 }
 function resetMastered(lv){try{localStorage.removeItem('mastered_lv'+lv);}catch(e){}}
 function getAllMasteredCount(){return [2,3,4,5,6].reduce(function(s,lv){return s+getMastered(lv).length;},0);}
@@ -965,6 +1052,7 @@ window.onload=function(){
   updateBatchInfo();
   buildFolderSection();
   document.addEventListener('keydown',onKey);
+  initFirebase();
 };
 
 /* ═══════ HOME ═══════ */
@@ -1115,7 +1203,7 @@ function gotoHome(){clearInterval(qTimer);qActive=false;buildGrid();updateBatchI
 function gotoScan(){if(idx>0&&idx<queue.length)showScreen('scan');else gotoHome();}
 function gotoNotebook(){buildNotebook();showScreen('notebook');}
 function gotoReviewFromNav(){showScreen('home');setTimeout(function(){var el=document.querySelector('.section-block');if(el)el.scrollIntoView({behavior:'smooth'});},100);}
-function gotoAchievement(){buildAchievement();showScreen('achievement');}
+function gotoAchievement(){buildAchievement();buildLeaderboard();showScreen('achievement');}
 
 /* ═══════ SCAN ═══════ */
 function startScan(){
@@ -1484,6 +1572,42 @@ function showReviewResult(){
 }
 
 /* ═══════ ACHIEVEMENT ═══════ */
+function buildLeaderboard(){
+  var el=document.getElementById('leaderboardSection');
+  if(!el)return;
+  el.innerHTML='<div style="text-align:center;color:var(--text2);font-size:.85rem;padding:10px;">載入中...</div>';
+  fbGetStats(function(data){
+    var html='<div style="background:var(--surface);border-radius:14px;padding:14px;border:1px solid var(--border);margin-bottom:12px;">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'+
+      '<div style="font-size:1.4rem;">👥</div>'+
+      '<div><div style="font-size:1.2rem;font-weight:800;color:var(--gold);">'+data.total+'</div>'+
+      '<div style="font-size:.78rem;color:var(--text2);">累計使用人數</div></div></div>';
+
+    // Group by level and milestone
+    var levels=[2,3,4,5,6];
+    var milestones=[100,300,500,700,900,1080];
+    levels.forEach(function(lv){
+      var lvEntries=data.board.filter(function(e){return e.level===lv;});
+      if(lvEntries.length===0)return;
+      html+='<div style="margin-bottom:10px;"><div style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Level '+lv+'</div>';
+      milestones.forEach(function(m){
+        var mEntries=lvEntries.filter(function(e){return e.milestone===m;});
+        if(mEntries.length===0)return;
+        html+='<div style="font-size:.75rem;color:var(--text2);margin-bottom:4px;">🏆 '+m+' 字：';
+        html+=mEntries.slice(0,10).map(function(e){
+          return '<span style="background:var(--surface2);border-radius:6px;padding:2px 6px;margin:1px;display:inline-block;font-size:.78rem;color:var(--text);">'+e.name+' <span style="color:var(--text2);font-size:.68rem;">'+e.date+'</span></span>';
+        }).join('');
+        if(mEntries.length>10)html+='<span style="font-size:.72rem;color:var(--text2);"> ...等 '+mEntries.length+' 人</span>';
+        html+='</div>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+    html+='<button onclick="buildLeaderboard()" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:8px;font-size:.82rem;cursor:pointer;margin-bottom:8px;">🔄 重新整理</button>';
+    el.innerHTML=html;
+  });
+}
+
 function buildAchievement(){
   var log=getLog();
   var flog=getFolderLog();
@@ -1923,6 +2047,9 @@ function showFolderDrillResult(){
   });
   showScreen('folderDrillResult');
 }
+
+
+
 
 
 
