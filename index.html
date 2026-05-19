@@ -443,7 +443,9 @@ h1 span{color:var(--accent)}
   </div>
   <div class="drill-options" id="drillOpts"></div>
   <div class="drill-feedback" id="drillFb"></div>
-  <button class="drill-next" id="drillNext" onclick="nextDrill()" style="display:none">下一題 →</button>
+  <div id="drillNextArea">
+    <button class="drill-next" id="drillNext" onclick="nextDrill()" style="display:none;width:100%;">下一題 →</button>
+  </div>
 </div>
 
 <!-- ══ DRILL / REVIEW RESULT ══ -->
@@ -471,9 +473,18 @@ h1 span{color:var(--accent)}
   </div>
 
   <div id="nbWordList" class="word-list"></div>
-  <button class="nb-practice-btn" id="nbPracticeBtn" onclick="startNBDrill()">🎯 進入錯題測驗</button>
+  <div style="height:70px;"></div><!-- 底部空間讓內容不被浮動按鈕擋住 -->
   <button class="back-link" onclick="gotoHome()">← 返回首頁</button>
 </div>
+
+<!-- 浮動錯題測驗按鈕 -->
+<button id="nbPracticeBtn" onclick="startNBDrill()"
+  style="position:fixed;bottom:76px;right:16px;z-index:50;
+         background:var(--accent);color:#fff;border:none;border-radius:99px;
+         padding:14px 20px;font-size:.95rem;font-weight:700;cursor:pointer;
+         box-shadow:0 4px 16px rgba(108,99,255,.5);display:none;">
+  🎯 錯題測驗
+</button>
 
 <!-- ══ REVIEW TEST ══ -->
 <div id="reviewTest" class="screen">
@@ -601,13 +612,28 @@ h1 span{color:var(--accent)}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* ═══════ STATE ═══════ */
 var allWords=[];
 var selLv=new Set();
 var queue=[],idx=0,counts={know:0,unknown:0},scanLevels=[];
 var qTimer=null,qActive=false,qCorrect='';
 var dQueue=[],dIdx=0,dScore={c:0,total:0},dWord=null;
-var drillWordResults=[],drillFromNB=false,drillNBLevel=null;
+var drillWordResults=[],drillFromNB=false,drillNBLevel=null,_drillWordToRemove=null;
 var nbActiveLevel=null;
 var reviewCount=0,reviewQueue=[],reviewIdx=0,reviewScore={c:0,total:0},reviewWord=null;
 var reviewWordResults=[];
@@ -1396,7 +1422,9 @@ function renderDrill(){
 
   var c=document.getElementById('drillOpts');c.innerHTML='';
   qdata.opts.forEach(function(opt){
-    var b=document.createElement('button');b.className='drill-opt';b.textContent=opt;
+    var b=document.createElement('button');b.className='drill-opt';
+    b.setAttribute('data-opt',opt);
+    b.textContent=opt;
     b.style.fontSize=isChinese(opt)?'1.5rem':'1.8rem';
     b.addEventListener('click',(function(o,btn){return function(){answerDrill(o,btn);};})(opt,b));
     c.appendChild(b);
@@ -1406,70 +1434,122 @@ function renderDrill(){
 var _currentDrillQuiz=null;
 function answerDrill(ans,btn){
   var correctAns=_currentDrillQuiz?_currentDrillQuiz.correctAnswer:dWord.zh;
+  var direction=_currentDrillQuiz?_currentDrillQuiz.direction:'en2zh';
   var ok=ans===correctAns;
   document.querySelectorAll('.drill-opt').forEach(function(b){
     b.disabled=true;
-    if(b.textContent===correctAns)b.classList.add('correct');
+    var optVal=b.getAttribute('data-opt')||b.textContent;
+    var match=direction==='en2zh'?
+      allWords.find(function(w){return w.zh===optVal;}):
+      allWords.find(function(w){return w.en===optVal;});
+    var translation=match?(direction==='en2zh'?match.en:match.zh):'';
+    if(translation&&match){
+      var enWord=direction==='en2zh'?match.en:optVal;
+      // Build button using DOM to avoid quote issues
+      b.textContent='';
+      var s1=document.createElement('span');s1.textContent=optVal;
+      var s2=document.createElement('span');s2.style.cssText='font-size:.78rem;color:var(--text2);margin-left:8px;font-style:italic;';s2.textContent=match.pos;
+      var s3=document.createElement('span');s3.style.cssText='font-size:.78rem;color:var(--text2);margin-left:6px;';s3.textContent=translation;
+      var spk=document.createElement('button');
+      spk.textContent='🔊';
+      spk.style.cssText='margin-left:8px;background:var(--surface2);border:none;color:var(--text2);border-radius:6px;padding:2px 7px;font-size:.78rem;cursor:pointer;';
+      spk.addEventListener('click',(function(en){return function(e){e.stopPropagation();speakText(en);};})(enWord));
+      b.appendChild(s1);b.appendChild(s2);b.appendChild(s3);b.appendChild(spk);
+    }
+    if(optVal===correctAns)b.classList.add('correct');
     else if(b===btn&&!ok)b.classList.add('wrong');
   });
   var fb=document.getElementById('drillFb');
-  var showCorrect=_currentDrillQuiz&&_currentDrillQuiz.direction==='en2zh'?dWord.zh:dWord.en;
+  var showCorrect=direction==='en2zh'?dWord.zh:dWord.en;
   if(ok){
-    dScore.c++;
-    fb.textContent='✅ 答對了！';
-    fb.style.color='var(--know)';
+    dScore.c++;fb.textContent='✅ 答對了！';fb.style.color='var(--know)';
     drillWordResults.push({word:dWord,correct:true});
-    // 答對立刻問：留在錯題本還是移除？
-    var w=dWord;
-    setTimeout(function(){
-      showModal('✅ '+w.en+' 答對了！', w.zh+' ('+w.pos+')  這個字要怎麼處理？', [
-          {label:'📖 留在錯題本繼續練',cls:'btn-secondary',fn:function(){
-            closeModal();
-            document.getElementById('drillNext').style.display='block';
-          }},
-          {label:'✅ 移除，我記住了',cls:'btn-primary',fn:function(){
-            closeModal();
-            removeFromNB(w.level,w.en);
-            addMastered(w.level,w.en);
-            updateLevelBadges();
-            document.getElementById('drillNext').style.display='block';
-          }}
-        ]
-      );
-    },600);
   } else {
-    fb.innerHTML='❌ 正確答案：<strong>'+showCorrect+'</strong>';
-    fb.style.color='var(--unknown)';
+    fb.innerHTML='❌ 正確答案：<strong>'+showCorrect+'</strong>';fb.style.color='var(--unknown)';
     drillWordResults.push({word:dWord,correct:false});
-    dQueue.push(dWord);
-    document.getElementById('drillNext').style.display='block';
   }
+  document.getElementById('drillNext').style.display='block';
 }
 function nextDrill(){dIdx++;renderDrill();}
+function removeDrillWord(){
+  if(!_drillWordToRemove)return;
+  removeFromNB(_drillWordToRemove.level,_drillWordToRemove.en);
+  addMastered(_drillWordToRemove.level,_drillWordToRemove.en);
+  updateLevelBadges();
+  showToast('已移出錯題本 ✅');
+  _drillWordToRemove=null;
+  nextDrill();
+}
 function speakDrill(){if(dWord)speakText(dWord.en);}
 
 /* ═══════ DRILL RESULT ═══════ */
 function showDrillResult(){
   addLog('drill','錯題本練習 · 共 '+dScore.total+' 字',dScore.c);
+  var remainNB=getAllNBCount();
   document.getElementById('drillResultTitle').textContent='練習完成 🏆';
-  document.getElementById('drillResultSub').textContent='答對 '+dScore.c+' / '+dScore.total;
-  document.getElementById('drillResultExtra').innerHTML='';
-  document.getElementById('drillCheckLabel').textContent='勾選要「移出錯題本」的單字：';
-  document.getElementById('drillCheckLabel').style.display='';
-  var seen={};drillWordResults.forEach(function(r){seen[r.word.en]=r;});
-  var unique=Object.values(seen);
-  var list=document.getElementById('wordCheckList');list.innerHTML='';
-  unique.forEach(function(r){
-    var row=document.createElement('div');row.className='word-check-row';
-    row.innerHTML='<input type="checkbox" data-en="'+escJs(r.word.en)+'" data-lv="'+r.word.level+'" '+(r.correct?'checked':'')+'>'+
-      '<div class="word-check-info"><div class="word-check-en">'+r.word.en+' <span style="color:var(--text2);font-size:.75rem;font-style:italic">'+r.word.pos+'</span></div><div class="word-check-zh">'+r.word.zh+'</div></div>'+
-      '<span class="word-check-result '+(r.correct?'correct':'wrong')+'">'+(r.correct?'答對':'答錯')+'</span>';
-    list.appendChild(row);
+  document.getElementById('drillResultSub').textContent='這次練習了 '+dScore.total+' 個字，答對 '+dScore.c+' 個';
+  document.getElementById('drillResultExtra').innerHTML='<div style="font-size:.85rem;color:var(--text2);margin-bottom:8px;">錯題本還剩 '+remainNB+' 個字</div>';
+  document.getElementById('drillCheckLabel').style.display='none';
+
+  var seen={};
+  var correctWords=drillWordResults.filter(function(r){
+    if(!r.correct||seen[r.word.en])return false;
+    seen[r.word.en]=true;return true;
   });
+
+  var list=document.getElementById('wordCheckList');list.innerHTML='';
+
+  if(correctWords.length>0){
+    // 全選列
+    var hdr=document.createElement('div');
+    hdr.style.cssText='font-size:.82rem;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;';
+    var span=document.createElement('span');span.textContent='答對的字（勾選要移出錯題本的）：';
+    var lbl=document.createElement('label');lbl.style.cssText='cursor:pointer;font-size:.8rem;';
+    var allCb=document.createElement('input');allCb.type='checkbox';allCb.checked=true;allCb.style.marginRight='4px';
+    allCb.onchange=function(){document.querySelectorAll('.drill-result-check').forEach(function(c){c.checked=allCb.checked;});};
+    lbl.appendChild(allCb);lbl.appendChild(document.createTextNode('全選'));
+    hdr.appendChild(span);hdr.appendChild(lbl);list.appendChild(hdr);
+
+    correctWords.forEach(function(r){
+      var row=document.createElement('div');row.className='word-check-row';
+      var cb=document.createElement('input');cb.type='checkbox';cb.className='drill-result-check';
+      cb.setAttribute('data-en',r.word.en);cb.setAttribute('data-lv',r.word.level);
+      cb.checked=true;cb.style.cssText='width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;';
+      var info=document.createElement('div');info.className='word-check-info';
+      info.innerHTML='<div class="word-check-en">'+r.word.en+' <span style="color:var(--text2);font-size:.75rem;font-style:italic">'+r.word.pos+'</span></div><div class="word-check-zh">'+r.word.zh+'</div>';
+      var badge=document.createElement('span');badge.className='word-check-result correct';badge.textContent='答對';
+      row.appendChild(cb);row.appendChild(info);row.appendChild(badge);
+      list.appendChild(row);
+    });
+  }
+
   var btns=document.getElementById('drillResultBtns');btns.innerHTML='';
-  addBtn(btns,'✅ 移出已勾選的字','btn-primary',removeCheckedFromNB);
+  if(correctWords.length>0){
+    addBtn(btns,'✅ 移出已勾選的字','btn-primary',function(){
+      document.querySelectorAll('.drill-result-check:checked').forEach(function(cb){
+        removeFromNB(parseInt(cb.getAttribute('data-lv')),cb.getAttribute('data-en'));
+      });
+      showToast('已更新錯題本 ✅');
+      updateLevelBadges();
+      var remain=getAllNBCount();
+      setTimeout(function(){
+        if(remain>0){
+          showModal('更新完成','接下來要做什麼？',[
+            {label:'💪 繼續練錯題本',cls:'btn-primary',fn:function(){closeModal();startNBDrill();}},
+            {label:'📖 看錯題本',cls:'btn-secondary',fn:function(){closeModal();showNotebookFromDrillResult();}},
+            {label:'🏠 回首頁',cls:'btn-secondary',fn:function(){closeModal();gotoHome();}}
+          ]);
+        } else {
+          showModal('錯題本清空了 🎉','所有錯題都已處理完畢！',[
+            {label:'🏠 回首頁',cls:'btn-primary',fn:function(){closeModal();gotoHome();}}
+          ]);
+        }
+      },500);
+    });
+  }
+  if(remainNB>0) addBtn(btns,'💪 繼續練錯題本','btn-secondary',function(){startNBDrill();});
+  addBtn(btns,'📖 看錯題本','btn-secondary',showNotebookFromDrillResult);
   addBtn(btns,'🏠 回首頁','btn-secondary',gotoHome);
-  addBtn(btns,'📖 回錯題本','btn-secondary',showNotebookFromDrillResult);
   showScreen('drillResult');updateLevelBadges();
 }
 function addBtn(container,text,cls,fn){var b=document.createElement('button');b.className=cls;b.textContent=text;b.onclick=fn;container.appendChild(b);}
@@ -1705,11 +1785,13 @@ function renderNBTab(level){
   var list=document.getElementById('nbWordList');list.innerHTML='';
   if(words.length===0){
     list.innerHTML='<div class="nb-empty">這個程度目前沒有錯題 🎉</div>';
-    document.getElementById('nbPracticeBtn').disabled=true;
+    var pb=document.getElementById('nbPracticeBtn');
+    if(pb)pb.style.display='none';
     renderNBCopyBar([]);
     return;
   }
-  document.getElementById('nbPracticeBtn').disabled=false;
+  var pb=document.getElementById('nbPracticeBtn');
+  if(pb)pb.style.display='block';
   renderNBCopyBar(words);
   words.forEach(function(w){
     var row=document.createElement('div');row.className='word-row';
@@ -2047,6 +2129,21 @@ function showFolderDrillResult(){
   });
   showScreen('folderDrillResult');
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
