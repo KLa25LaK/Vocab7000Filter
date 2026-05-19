@@ -541,7 +541,7 @@ h1 span{color:var(--accent)}
   </div>
 </div>
 
-<!-- ══ FOLDER SEARCH ══ -->
+<!-- ══ FOLDER SEARCH (加字) ══ -->
 <div id="folderSearch" class="screen">
   <div style="width:100%;display:flex;align-items:center;gap:10px;margin-bottom:14px;">
     <h2 style="font-size:1.1rem;font-weight:700;flex:1;">📁 <span id="searchFolderName"></span></h2>
@@ -554,6 +554,33 @@ h1 span{color:var(--accent)}
   </div>
   <div id="searchDropdown" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden;max-height:280px;overflow-y:auto;"></div>
   <div id="searchWordList" style="width:100%;"></div>
+</div>
+
+<!-- ══ FOLDER VIEW (單字總表) ══ -->
+<div id="folderView" class="screen">
+  <div style="width:100%;display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-shrink:0;">
+    <h2 style="font-size:1.1rem;font-weight:700;flex:1;">📁 <span id="folderViewName"></span></h2>
+    <button onclick="openFolderSearch(_viewFolderId)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:7px 10px;font-size:.8rem;cursor:pointer;">＋ 加字</button>
+    <button onclick="gotoHome()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:7px 10px;font-size:.8rem;cursor:pointer;">← 返回</button>
+  </div>
+
+  <!-- 複製工具列 -->
+  <div id="folderViewCopyBar" style="display:none;gap:8px;width:100%;margin-bottom:10px;flex-wrap:wrap;">
+    <button onclick="folderViewSelectAll(true)" style="flex:1;min-width:80px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px;font-size:.78rem;cursor:pointer;">☑ 全選</button>
+    <button onclick="folderViewSelectAll(false)" style="flex:1;min-width:80px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px;font-size:.78rem;cursor:pointer;">☐ 全不選</button>
+    <button onclick="folderViewCopyChecked()" style="flex:2;min-width:120px;background:#1a2a1a;border:2px solid var(--know);color:var(--know);border-radius:8px;padding:8px;font-size:.82rem;font-weight:700;cursor:pointer;">📋 複製已勾選</button>
+  </div>
+
+  <div id="folderViewWordList" style="width:100%;padding-bottom:80px;"></div>
+
+  <!-- 浮動練習按鈕 -->
+  <button id="folderViewPracticeBtn" onclick="startFolderDrillFromView()"
+    style="position:fixed;bottom:76px;right:16px;z-index:50;display:none;
+           background:var(--accent);color:#fff;border:none;border-radius:99px;
+           padding:14px 20px;font-size:.95rem;font-weight:700;cursor:pointer;
+           box-shadow:0 4px 16px rgba(108,99,255,.5);">
+    🎯 開始練習
+  </button>
 </div>
 
 <!-- ══ FOLDER DRILL ══ -->
@@ -578,16 +605,20 @@ h1 span{color:var(--accent)}
 <div id="folderDrillResult" class="screen">
   <div class="drill-result">
     <h2 id="folderResultTitle">練習完成 🏆</h2>
-    <p id="folderResultSub" style="color:var(--text2);margin-bottom:16px;"></p>
+    <p id="folderResultSub" style="color:var(--text2);margin-bottom:8px;"></p>
+    <div id="folderResultExtra" style="margin-bottom:8px;"></div>
+    <p id="folderResultCheckLabel" style="font-size:.82rem;color:var(--text2);margin-bottom:6px;display:none;"></p>
     <div class="word-check-list" id="folderResultList" style="max-height:50vh;overflow-y:auto;margin-bottom:16px;"></div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <button class="btn-primary" onclick="startFolderDrill(activeFolderId)">🔄 再練一次</button>
-      <button class="btn-secondary" onclick="gotoHome()">🏠 回首頁</button>
-      <button class="btn-secondary" onclick="gotoAchievement()">🏆 查看成就</button>
-    </div>
+    <div id="folderResultBtns" style="display:flex;flex-direction:column;gap:10px;"></div>
   </div>
 </div>
 <script>
+
+
+
+
+
+
 
 
 
@@ -966,6 +997,32 @@ function fbGetStats(callback){
   });
 }
 
+
+/* ═══════ IMPORT FROM OTHER PAGES ═══════ */
+
+
+
+/* ═══════ IMPORT FROM OTHER PAGES ═══════ */
+function checkVocab7000Import(){
+  try{
+    var queue=JSON.parse(localStorage.getItem('vocab7000_import')||'[]');
+    if(queue.length===0)return;
+    var folders=getFolders();
+    var wordList=queue.map(function(w){return w.en;}).join(', ');
+    if(folders.length===0){showModal('有 '+queue.length+' 個字待匯入','來自課文：'+wordList+'。請先建立資料夾再匯入。',[{label:'確定',cls:'btn-primary',fn:closeModal}]);return;}
+    var btns=folders.map(function(f){return {label:'📁 '+f.name+' ('+f.words.length+'字)',cls:'btn-secondary',fn:(function(fid){return function(){closeModal();doImportToFolder(fid,queue);};})(f.id)};});
+    btns.push({label:'取消',cls:'btn-secondary',fn:closeModal});
+    showModal('📥 匯入 '+queue.length+' 個字','來自課文：'+wordList+'。要加入哪個資料夾？',btns);
+  }catch(e){console.log('Import check error:',e);}
+}
+
+function doImportToFolder(folderId,queue){
+  queue.forEach(function(w){addWordToFolder(folderId,{en:w.en,zh:w.zh,pos:w.pos||'n./v.',level:0,custom:true});});
+  localStorage.removeItem('vocab7000_import');
+  showToast('已匯入 '+queue.length+' 個字！');
+  buildFolderSection();
+}
+
 /* ═══════ STORAGE: NOTEBOOK (帶時間戳) ═══════ */
 function getNB(lv){
   try{var s=localStorage.getItem('nb_lv'+lv);return s?JSON.parse(s):[];}
@@ -1079,6 +1136,8 @@ window.onload=function(){
   buildFolderSection();
   document.addEventListener('keydown',onKey);
   initFirebase();
+  // 延遲一秒再檢查，讓頁面先完成載入
+  setTimeout(checkVocab7000Import,1000);
 };
 
 /* ═══════ HOME ═══════ */
@@ -1222,7 +1281,7 @@ function showScreen(id){
   var map={home:'gnavHome',scan:'gnavScan',result:'gnavScan',
            notebook:'gnavNB',drill:'gnavNB',drillResult:'gnavNB',
            reviewTest:'gnavReview',achievement:'gnavAch',
-           folderSearch:'gnavHome',folderDrill:'gnavHome',folderDrillResult:'gnavHome'};
+           folderView:'gnavHome',folderSearch:'gnavHome',folderDrill:'gnavHome',folderDrillResult:'gnavHome'};
   if(map[id])document.getElementById(map[id]).classList.add('active');
 }
 function gotoHome(){clearInterval(qTimer);qActive=false;buildGrid();updateBatchInfo();buildFolderSection();showScreen('home');}
@@ -1867,6 +1926,7 @@ function shuffle(a){var arr=a.slice();for(var i=arr.length-1;i>0;i--){var j=Math
 
 /* ═══════ FOLDER UI ═══════ */
 var activeFolderId=null;
+var _viewFolderId=null;
 var folderDrillQueue=[],folderDrillIdx=0,folderDrillScore={c:0,total:0},folderDrillWord=null;
 var folderDrillResults=[];
 var _currentFolderQuiz=null;
@@ -1876,22 +1936,17 @@ function buildFolderSection(){
   if(!section)return;
   var folders=getFolders();
   section.innerHTML='';
-
-  // Header
   var hdr=document.createElement('div');
   hdr.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:10px;';
   hdr.innerHTML='<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);flex:1;">📁 自訂單字資料夾</div>'+
     (folders.length<6?'<button onclick="promptCreateFolder()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:.82rem;font-weight:700;cursor:pointer;">＋ 新增</button>':'<span style="font-size:.75rem;color:var(--text2);">已達上限 6 個</span>');
   section.appendChild(hdr);
-
   if(folders.length===0){
     var empty=document.createElement('div');
     empty.style.cssText='font-size:.82rem;color:var(--text2);text-align:center;padding:12px;background:var(--surface);border-radius:10px;border:1px solid var(--border);';
     empty.textContent='還沒有資料夾，按 ＋ 新增第一個';
-    section.appendChild(empty);
-    return;
+    section.appendChild(empty);return;
   }
-
   folders.forEach(function(f){
     var card=document.createElement('div');
     card.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:8px;';
@@ -1901,17 +1956,15 @@ function buildFolderSection(){
         '<span style="font-size:.75rem;color:var(--text2);">'+f.words.length+' 字</span>'+
       '</div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+
-        '<button data-fid="'+f.id+'" class="folder-action-btn folder-practice" style="flex:2;min-width:90px;background:#0d2a21;color:var(--know);border:2px solid var(--know);border-radius:8px;padding:8px;font-size:.8rem;font-weight:700;cursor:pointer;"'+(f.words.length===0?' disabled':'')+'>'+(f.words.length===0?'（尚無單字）':'🎯 開始練習')+'</button>'+
+        '<button data-fid="'+f.id+'" class="folder-action-btn folder-view" style="flex:2;min-width:90px;background:#0d2a21;color:var(--know);border:2px solid var(--know);border-radius:8px;padding:8px;font-size:.8rem;font-weight:700;cursor:pointer;"'+(f.words.length===0?' disabled':'')+'>'+(f.words.length===0?'（尚無單字）':'📋 查看單字')+'</button>'+
         '<button data-fid="'+f.id+'" class="folder-action-btn folder-add" style="flex:1;min-width:60px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px;font-size:.8rem;cursor:pointer;">＋ 加字</button>'+
         '<button data-fid="'+f.id+'" class="folder-action-btn folder-rename" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px;font-size:.8rem;cursor:pointer;">✏️</button>'+
         '<button data-fid="'+f.id+'" class="folder-action-btn folder-delete" style="background:var(--surface2);border:1px solid var(--border);color:var(--unknown);border-radius:8px;padding:8px;font-size:.8rem;cursor:pointer;">🗑</button>'+
       '</div>';
     section.appendChild(card);
   });
-
-  // Bind events
-  section.querySelectorAll('.folder-practice').forEach(function(btn){
-    btn.addEventListener('click',function(){startFolderDrill(btn.getAttribute('data-fid'));});
+  section.querySelectorAll('.folder-view').forEach(function(btn){
+    btn.addEventListener('click',function(){openFolderView(btn.getAttribute('data-fid'));});
   });
   section.querySelectorAll('.folder-add').forEach(function(btn){
     btn.addEventListener('click',function(){openFolderSearch(btn.getAttribute('data-fid'));});
@@ -1923,6 +1976,537 @@ function buildFolderSection(){
     btn.addEventListener('click',function(){promptDeleteFolder(btn.getAttribute('data-fid'));});
   });
 }
+
+function promptCreateFolder(){
+  var name=prompt('請輸入資料夾名稱（例如：翰林第三冊第五課）：');
+  if(!name||!name.trim())return;
+  createFolder(name.trim());buildFolderSection();
+}
+function promptRenameFolder(id){
+  var f=getFolderById(id);if(!f)return;
+  var name=prompt('請輸入新名稱：',f.name);
+  if(!name||!name.trim())return;
+  renameFolder(id,name.trim());buildFolderSection();
+}
+function promptDeleteFolder(id){
+  var f=getFolderById(id);if(!f)return;
+  showModal('刪除「'+f.name+'」？','資料夾內的 '+f.words.length+' 個字也會一起刪除。確定嗎？',
+    [{label:'取消',cls:'btn-secondary',fn:closeModal},
+     {label:'確定刪除',cls:'btn-warn',fn:function(){closeModal();deleteFolder(id);buildFolderSection();}}]);
+}
+
+/* ── FOLDER VIEW (單字總表) ── */
+function openFolderView(folderId){
+  _viewFolderId=folderId;
+  var f=getFolderById(folderId);if(!f)return;
+  document.getElementById('folderViewName').textContent=f.name;
+  renderFolderViewList(folderId);
+  showScreen('folderView');
+}
+function renderFolderViewList(folderId){
+  var f=getFolderById(folderId);if(!f)return;
+  var list=document.getElementById('folderViewWordList');list.innerHTML='';
+  var bar=document.getElementById('folderViewCopyBar');
+  var btn=document.getElementById('folderViewPracticeBtn');
+  if(f.words.length===0){
+    list.innerHTML='<div style="text-align:center;color:var(--text2);padding:20px;">還沒有單字，按右上角「＋ 加字」加入</div>';
+    bar.style.display='none';if(btn)btn.style.display='none';return;
+  }
+  bar.style.display='flex';if(btn)btn.style.display='block';
+  f.words.forEach(function(w){
+    var row=document.createElement('div');row.className='word-row';
+    row.style.cssText='align-items:flex-start;padding:10px 6px;';
+    var cb=document.createElement('input');cb.type='checkbox';cb.className='fv-check';cb.checked=true;
+    cb.setAttribute('data-en',w.en);cb.setAttribute('data-pos',w.pos||'');cb.setAttribute('data-zh',w.zh);
+    cb.style.cssText='width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;margin-top:4px;';
+    var info=document.createElement('div');info.className='word-row-info';
+    info.style.flex='1';
+    info.innerHTML=
+      '<div style="font-size:1.3rem;font-weight:800;color:var(--text);">'+w.en+'</div>'+
+      '<div style="font-size:.82rem;color:var(--accent);font-style:italic;margin-bottom:2px;">'+( w.pos||'')+'</div>'+
+      '<div style="font-size:.95rem;color:var(--text2);">'+w.zh+'</div>';
+    var btns=document.createElement('div');btns.className='word-row-btns';
+    var bSpeak=document.createElement('button');bSpeak.className='icon-btn';bSpeak.textContent='🔊';
+    bSpeak.addEventListener('click',(function(en){return function(){speakText(en);};})(w.en));
+    var bDel=document.createElement('button');bDel.className='icon-btn del';bDel.textContent='✕';
+    bDel.addEventListener('click',(function(fid,en){return function(){
+      removeWordFromFolder(fid,en);renderFolderViewList(fid);buildFolderSection();
+    };})(_viewFolderId,w.en));
+    btns.appendChild(bSpeak);btns.appendChild(bDel);
+    row.appendChild(cb);row.appendChild(info);row.appendChild(btns);
+    list.appendChild(row);
+  });
+}
+function folderViewSelectAll(checked){
+  document.querySelectorAll('.fv-check').forEach(function(cb){cb.checked=checked;});
+}
+function folderViewCopyChecked(){
+  var lines=[];
+  document.querySelectorAll('.fv-check:checked').forEach(function(cb){
+    lines.push(cb.getAttribute('data-zh')+' '+cb.getAttribute('data-pos')+' '+cb.getAttribute('data-en'));
+  });
+  if(lines.length===0){showToast('請先勾選要複製的字');return;}
+  var text=lines.join('\n');
+  if(navigator.clipboard)navigator.clipboard.writeText(text).then(function(){showToast('已複製 '+lines.length+' 個字 📋');});
+  else{var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('已複製 '+lines.length+' 個字 📋');}
+}
+function startFolderDrillFromView(){
+  if(_viewFolderId)startFolderDrill(_viewFolderId);
+}
+
+/* ── FOLDER SEARCH ── */
+var _searchFolderId=null;
+function openFolderSearch(folderId){
+  _searchFolderId=folderId;
+  var f=getFolderById(folderId);if(!f)return;
+  document.getElementById('searchFolderName').textContent=f.name;
+  document.getElementById('searchInput').value='';
+  document.getElementById('searchDropdown').innerHTML='';
+  document.getElementById('searchWordList').innerHTML='';
+  renderFolderWordList(folderId);
+  showScreen('folderSearch');
+}
+function onSearchInput(){
+  var q=document.getElementById('searchInput').value.trim().toLowerCase();
+  var dd=document.getElementById('searchDropdown');dd.innerHTML='';
+  if(q.length===0)return;
+  var matches=allWords.filter(function(w){return w.en.toLowerCase().startsWith(q);}).slice(0,12);
+  var exactMatch=allWords.find(function(w){return w.en.toLowerCase()===q;});
+  matches.forEach(function(w){
+    var item=document.createElement('div');item.className='search-item';
+    item.style.cssText='padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;';
+    item.innerHTML='<div style="flex:1;"><div style="font-weight:700;font-size:.9rem;">'+w.en+'</div><div style="font-size:.75rem;color:var(--text2);">'+w.pos+' '+w.zh+'</div></div>'+
+      '<button style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;">加入</button>';
+    item.querySelector('button').addEventListener('click',(function(word){return function(e){
+      e.stopPropagation();
+      addWordToFolder(_searchFolderId,word);
+      renderFolderWordList(_searchFolderId);
+      buildFolderSection();
+      showToast(word.en+' 已加入 ✅');
+    };})(w));
+    dd.appendChild(item);
+  });
+  if(!exactMatch&&q.length>=2){
+    var custom=document.createElement('div');
+    custom.style.cssText='padding:10px 14px;cursor:pointer;background:var(--surface2);display:flex;align-items:center;gap:10px;';
+    custom.innerHTML='<div style="flex:1;font-size:.85rem;color:var(--warn);">「'+q+'」不在字庫，自訂加入</div>'+
+      '<button style="background:var(--warn);color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;font-weight:700;">自訂</button>';
+    custom.querySelector('button').addEventListener('click',function(e){e.stopPropagation();openCustomWordModal(q);});
+    dd.appendChild(custom);
+  }
+}
+function openCustomWordModal(en){
+  document.getElementById('customWordEn').textContent=en;
+  document.getElementById('customWordZh').value='';
+  document.getElementById('customWordPos').value='';
+  document.getElementById('customWordModal').style.display='flex';
+}
+function closeCustomWordModal(){document.getElementById('customWordModal').style.display='none';}
+function saveCustomWord(){
+  var en=document.getElementById('customWordEn').textContent;
+  var zh=document.getElementById('customWordZh').value.trim();
+  var pos=document.getElementById('customWordPos').value.trim()||'n./v.';
+  if(!zh){alert('請輸入中文意思');return;}
+  var word={en:en,zh:zh,pos:pos,level:0,custom:true};
+  addWordToFolder(_searchFolderId,word);
+  renderFolderWordList(_searchFolderId);
+  buildFolderSection();
+  closeCustomWordModal();
+  showToast(en+' 已自訂加入 ✅');
+}
+function renderFolderWordList(folderId){
+  var f=getFolderById(folderId);if(!f)return;
+  var list=document.getElementById('searchWordList');list.innerHTML='';
+  if(f.words.length===0){
+    list.innerHTML='<div style="text-align:center;color:var(--text2);padding:16px;font-size:.85rem;">還沒有單字，用上方搜尋加入</div>';return;
+  }
+  list.innerHTML='<div style="font-size:.75rem;color:var(--text2);margin-bottom:6px;">已加入的字（'+f.words.length+'）：</div>';
+  f.words.forEach(function(w){
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border-radius:8px;margin-bottom:4px;border:1px solid var(--border);';
+    row.innerHTML='<div style="flex:1;"><span style="font-weight:700;font-size:.88rem;">'+w.en+'</span> <span style="font-size:.75rem;color:var(--accent);font-style:italic;">'+w.pos+'</span> <span style="font-size:.82rem;color:var(--text2);">'+w.zh+'</span></div>';
+    var delBtn=document.createElement('button');
+    delBtn.style.cssText='background:none;border:none;color:var(--unknown);cursor:pointer;font-size:.85rem;padding:2px 6px;';
+    delBtn.textContent='✕';
+    delBtn.addEventListener('click',(function(en){return function(){
+      removeWordFromFolder(_searchFolderId,en);renderFolderWordList(_searchFolderId);buildFolderSection();
+    };})(w.en));
+    row.appendChild(delBtn);list.appendChild(row);
+  });
+}
+
+/* ── FOLDER DRILL ── */
+function startFolderDrill(folderId){
+  var f=getFolderById(folderId);
+  if(!f||f.words.length===0)return;
+  activeFolderId=folderId;
+  folderDrillQueue=shuffle(f.words.slice());
+  folderDrillIdx=0;
+  folderDrillScore={c:0,total:folderDrillQueue.length};
+  folderDrillResults=[];
+  resetAnswerPositions();resetDirectionCounts();
+  document.getElementById('folderDrillTitle').textContent='📁 '+f.name;
+  showScreen('folderDrill');
+  renderFolderDrill();
+}
+function renderFolderDrill(){
+  if(folderDrillIdx>=folderDrillQueue.length){showFolderDrillResult();return;}
+  folderDrillWord=folderDrillQueue[folderDrillIdx];
+  document.getElementById('folderDrillPos').textContent=folderDrillWord.pos||'';
+  document.getElementById('folderDrillCtr').textContent=(folderDrillIdx+1)+' / '+folderDrillQueue.length;
+  document.getElementById('folderDrillProg').style.width=(folderDrillIdx/folderDrillQueue.length*100)+'%';
+  document.getElementById('folderDrillFb').textContent='';
+  document.getElementById('folderDrillNext').style.display='none';
+  var pool=allWords.length>0?allWords:folderDrillQueue;
+  var _fdir=getNextDirection();
+  var qdata=buildQuizOptionsWithDirection(folderDrillWord,pool,_fdir,getNextAnswerPosition());
+  _currentFolderQuiz=qdata;
+  var lbl=document.getElementById('folderDrillLabel');
+  if(lbl)lbl.textContent=qdata.direction==='en2zh'?'選出正確的中文意思：':'選出正確的英文單字：';
+  var qWord=document.getElementById('folderDrillQuestion');
+  if(qWord){
+    qWord.textContent=qdata.direction==='en2zh'?folderDrillWord.en:folderDrillWord.zh;
+    qWord.style.fontSize=qdata.direction==='en2zh'?'2.4rem':'1.8rem';
+  }
+  var c=document.getElementById('folderDrillOpts');c.innerHTML='';
+  qdata.opts.forEach(function(opt){
+    var b=document.createElement('button');b.className='drill-opt';
+    b.setAttribute('data-opt',opt);
+    b.textContent=opt;
+    b.style.fontSize=isChinese(opt)?'1.5rem':'1.8rem';
+    b.addEventListener('click',(function(o,btn){return function(){answerFolderDrill(o,btn);};})(opt,b));
+    c.appendChild(b);
+  });
+  if(qdata.direction==='en2zh')speakText(folderDrillWord.en);
+}
+function answerFolderDrill(ans,btn){
+  var correctAns=_currentFolderQuiz.correctAnswer;
+  var direction=_currentFolderQuiz.direction;
+  var ok=ans===correctAns;
+  document.querySelectorAll('#folderDrillOpts .drill-opt').forEach(function(b){
+    b.disabled=true;
+    var optVal=b.getAttribute('data-opt')||b.textContent;
+    var match=direction==='en2zh'?
+      allWords.find(function(w){return w.zh===optVal;}):
+      allWords.find(function(w){return w.en===optVal;});
+    var translation=match?(direction==='en2zh'?match.en:match.zh):'';
+    if(translation&&match){
+      var enWord=direction==='en2zh'?match.en:optVal;
+      b.textContent='';
+      var s1=document.createElement('span');s1.textContent=optVal;
+      var s2=document.createElement('span');s2.style.cssText='font-size:.78rem;color:var(--text2);margin-left:8px;font-style:italic;';s2.textContent=match.pos;
+      var s3=document.createElement('span');s3.style.cssText='font-size:.78rem;color:var(--text2);margin-left:6px;';s3.textContent=translation;
+      var spk=document.createElement('button');spk.textContent='🔊';
+      spk.style.cssText='margin-left:8px;background:var(--surface2);border:none;color:var(--text2);border-radius:6px;padding:2px 7px;font-size:.78rem;cursor:pointer;';
+      spk.addEventListener('click',(function(en){return function(e){e.stopPropagation();speakText(en);};})(enWord));
+      b.appendChild(s1);b.appendChild(s2);b.appendChild(s3);b.appendChild(spk);
+    }
+    if(optVal===correctAns)b.classList.add('correct');
+    else if(b===btn&&!ok)b.classList.add('wrong');
+  });
+  var fb=document.getElementById('folderDrillFb');
+  var showCorrect=direction==='en2zh'?folderDrillWord.zh:folderDrillWord.en;
+  if(ok){
+    folderDrillScore.c++;fb.textContent='✅ 答對了！';fb.style.color='var(--know)';
+    folderDrillResults.push({word:folderDrillWord,correct:true});
+  } else {
+    fb.innerHTML='❌ 正確答案：<strong>'+showCorrect+'</strong>';fb.style.color='var(--unknown)';
+    folderDrillResults.push({word:folderDrillWord,correct:false});
+  }
+  document.getElementById('folderDrillNext').style.display='block';
+}
+function nextFolderDrill(){folderDrillIdx++;renderFolderDrill();}
+function speakFolderDrill(){if(folderDrillWord)speakText(folderDrillWord.en);}
+
+function showFolderDrillResult(){
+  var f=getFolderById(activeFolderId);
+  addFolderLog(f?f.name:'資料夾',folderDrillScore.total,folderDrillScore.c);
+  document.getElementById('folderResultTitle').textContent='練習完成 🏆';
+  document.getElementById('folderResultSub').textContent='練習了 '+folderDrillScore.total+' 個字，答對 '+folderDrillScore.c+' 個';
+  document.getElementById('folderResultExtra').textContent='';
+  // Only show correct words with checkboxes
+  var seen={};
+  var correctWords=folderDrillResults.filter(function(r){
+    if(!r.correct||seen[r.word.en])return false;seen[r.word.en]=true;return true;
+  });
+  var lbl=document.getElementById('folderResultCheckLabel');
+  var list=document.getElementById('folderResultList');list.innerHTML='';
+  if(correctWords.length>0){
+    lbl.style.display='block';
+    lbl.textContent='答對的字（勾選要移出資料夾的）：';
+    // 全選列
+    var hdr=document.createElement('div');
+    hdr.style.cssText='font-size:.82rem;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;';
+    var allCb=document.createElement('input');allCb.type='checkbox';allCb.checked=true;allCb.style.marginRight='4px';
+    allCb.onchange=function(){document.querySelectorAll('.folder-result-check').forEach(function(c){c.checked=allCb.checked;});};
+    var lbl2=document.createElement('label');lbl2.style.cssText='cursor:pointer;font-size:.8rem;';
+    lbl2.appendChild(allCb);lbl2.appendChild(document.createTextNode('全選'));
+    hdr.appendChild(document.createElement('span'));hdr.appendChild(lbl2);
+    list.appendChild(hdr);
+    correctWords.forEach(function(r){
+      var row=document.createElement('div');row.className='word-check-row';
+      var cb=document.createElement('input');cb.type='checkbox';cb.className='folder-result-check';
+      cb.setAttribute('data-en',r.word.en);cb.checked=true;
+      cb.style.cssText='width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;';
+      var info=document.createElement('div');info.className='word-check-info';
+      info.innerHTML='<div class="word-check-en">'+r.word.en+' <span style="color:var(--text2);font-size:.75rem;font-style:italic">'+r.word.pos+'</span></div><div class="word-check-zh">'+r.word.zh+'</div>';
+      var badge=document.createElement('span');badge.className='word-check-result correct';badge.textContent='答對';
+      row.appendChild(cb);row.appendChild(info);row.appendChild(badge);
+      list.appendChild(row);
+    });
+  } else {
+    lbl.style.display='none';
+  }
+  var btns=document.getElementById('folderResultBtns');btns.innerHTML='';
+  if(correctWords.length>0){
+    addBtn(btns,'✅ 移出已勾選的字','btn-primary',function(){
+      document.querySelectorAll('.folder-result-check:checked').forEach(function(cb){
+        removeWordFromFolder(activeFolderId,cb.getAttribute('data-en'));
+      });
+      showToast('已更新資料夾 ✅');buildFolderSection();
+      setTimeout(function(){
+        var f=getFolderById(activeFolderId);
+        var remain=f?f.words.length:0;
+        if(remain>0){
+          showModal('更新完成','接下來要做什麼？',[
+            {label:'🔄 繼續練習',cls:'btn-primary',fn:function(){closeModal();startFolderDrill(activeFolderId);}},
+            {label:'📋 看單字表',cls:'btn-secondary',fn:function(){closeModal();openFolderView(activeFolderId);}},
+            {label:'🏠 回首頁',cls:'btn-secondary',fn:function(){closeModal();gotoHome();}}
+          ]);
+        } else {
+          showModal('資料夾清空了 🎉','所有單字都已移出！',[
+            {label:'🏠 回首頁',cls:'btn-primary',fn:function(){closeModal();gotoHome();}}
+          ]);
+        }
+      },500);
+    });
+  }
+  addBtn(btns,'🔄 再練一次','btn-secondary',function(){startFolderDrill(activeFolderId);});
+  addBtn(btns,'📋 看單字表','btn-secondary',function(){openFolderView(activeFolderId);});
+  addBtn(btns,'🏠 回首頁','btn-secondary',gotoHome);
+  showScreen('folderDrillResult');
+}
+
+/* ═══════ ACHIEVEMENT ═══════ */
+function buildLeaderboard(){
+  var el=document.getElementById('leaderboardSection');
+  if(!el)return;
+  el.innerHTML='<div style="text-align:center;color:var(--text2);font-size:.85rem;padding:10px;">載入中...</div>';
+  fbGetStats(function(data){
+    var html='<div style="background:var(--surface);border-radius:14px;padding:14px;border:1px solid var(--border);margin-bottom:12px;">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'+
+      '<div style="font-size:1.4rem;">👥</div>'+
+      '<div><div style="font-size:1.2rem;font-weight:800;color:var(--gold);">'+data.total+'</div>'+
+      '<div style="font-size:.78rem;color:var(--text2);">累計使用人數</div></div></div>';
+
+    // Group by level and milestone
+    var levels=[2,3,4,5,6];
+    var milestones=[100,300,500,700,900,1080];
+    levels.forEach(function(lv){
+      var lvEntries=data.board.filter(function(e){return e.level===lv;});
+      if(lvEntries.length===0)return;
+      html+='<div style="margin-bottom:10px;"><div style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Level '+lv+'</div>';
+      milestones.forEach(function(m){
+        var mEntries=lvEntries.filter(function(e){return e.milestone===m;});
+        if(mEntries.length===0)return;
+        html+='<div style="font-size:.75rem;color:var(--text2);margin-bottom:4px;">🏆 '+m+' 字：';
+        html+=mEntries.slice(0,10).map(function(e){
+          return '<span style="background:var(--surface2);border-radius:6px;padding:2px 6px;margin:1px;display:inline-block;font-size:.78rem;color:var(--text);">'+e.name+' <span style="color:var(--text2);font-size:.68rem;">'+e.date+'</span></span>';
+        }).join('');
+        if(mEntries.length>10)html+='<span style="font-size:.72rem;color:var(--text2);"> ...等 '+mEntries.length+' 人</span>';
+        html+='</div>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+    html+='<button onclick="buildLeaderboard()" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:8px;font-size:.82rem;cursor:pointer;margin-bottom:8px;">🔄 重新整理</button>';
+    el.innerHTML=html;
+  });
+}
+
+function buildAchievement(){
+  var log=getLog();
+  var flog=getFolderLog();
+  var sum=document.getElementById('achSummary');
+  sum.innerHTML=
+    '<div class="ach-card"><div class="ach-num">'+getAllMasteredCount()+'</div><div class="ach-lbl">目前掌握字數</div></div>'+
+    '<div class="ach-card"><div class="ach-num">'+getTotalBatchCount()+'</div><div class="ach-lbl">累積待考字數</div></div>'+
+    '<div class="ach-card"><div class="ach-num">'+getTotalCorrect()+'</div><div class="ach-lbl">累計答對字數</div></div>';
+  var ll=document.getElementById('achLogList');ll.innerHTML='';
+  // Merge logs
+  var allLogs=log.map(function(e){return Object.assign({},e,{_src:'main'});})
+    .concat(flog.map(function(e){return {type:'folder',detail:'📁 '+e.folderName+' · '+e.total+' 字',score:e.correct,date:e.date,time:e.time,ts:e.ts||0,_src:'folder'};}));
+  allLogs.sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+  if(allLogs.length===0){ll.innerHTML='<div class="ach-empty">還沒有學習紀錄，快去開始快篩吧！⚡</div>';return;}
+  allLogs.forEach(function(e){
+    var row=document.createElement('div');row.className='ach-log-row';
+    var typeMap={scan:{label:'快篩',cls:'scan'},review:{label:'複習',cls:'review'},drill:{label:'錯題',cls:'drill'},folder:{label:'資料夾',cls:'review'}};
+    var t=typeMap[e.type]||{label:'其他',cls:'scan'};
+    row.innerHTML='<div class="ach-log-date">'+e.date+'<br><span style="font-size:.7rem">'+e.time+'</span></div>'+
+      '<div class="ach-log-detail"><div class="ach-log-main">'+e.detail+'</div><div class="ach-log-sub">答對 '+e.score+' 字</div></div>'+
+      '<span class="ach-log-badge '+t.cls+'">'+t.label+'</span>';
+    ll.appendChild(row);
+  });
+}
+
+/* ═══════ RESET ═══════ */
+function askReset(level){
+  var name=level?'Level '+level:'所有程度';
+  var n=level?getMastered(level).length:getAllMasteredCount();
+  showModal('⚠️ 重置'+name,'你目前已掌握 '+n+' 個單字。重置後這些紀錄將全部消失。\n\n確定要重置嗎？',
+    [{label:'取消',cls:'btn-secondary',fn:closeModal},{label:'我要重置',cls:'btn-warn',fn:function(){confirmReset1(level,name,n);}}]);
+}
+function confirmReset1(level,name,n){
+  showModal('再次確認','你已經努力背了 '+n+' 個字，重置後努力的紀錄就消失了。\n\n真的要重置'+name+'嗎？',
+    [{label:'我不要了，取消',cls:'btn-primary',fn:closeModal},{label:'繼續重置',cls:'btn-warn',fn:function(){confirmReset2(level,name);}}]);
+}
+function confirmReset2(level,name){
+  showModal('最後確認 — 無法復原','這是最後一次確認，重置後無法復原。',
+    [{label:'算了，不要',cls:'btn-primary',fn:closeModal},{label:'✅ 確定重置',cls:'btn-warn',fn:function(){doReset(level);}}]);
+}
+function clearNB(level){
+  if(level){setNB(level,[]);}
+  else [2,3,4,5,6].forEach(function(lv){setNB(lv,[]);});
+}
+function doReset(level){
+  closeModal();
+  if(level){
+    resetMastered(level);
+    clearNB(level);
+    // 從批次中移除該 level 的字
+    var d=getBatchData();
+    Object.keys(d.days).forEach(function(day){
+      d.days[day]=d.days[day].filter(function(w){return w.level!==level;});
+      if(d.days[day].length===0)delete d.days[day];
+    });
+    saveBatchData(d);
+  } else {
+    [2,3,4,5,6].forEach(function(lv){resetMastered(lv);clearNB(lv);});
+    // 清空全部批次
+    saveBatchData({days:{}});
+  }
+  showToast((level?'Level '+level:'所有程度')+' 已重置（含錯題本與批次）🔄');
+  buildGrid();updateLevelBadges();updateBatchInfo();
+}
+
+/* ═══════ NOTEBOOK ═══════ */
+function buildNotebook(forceLevel){
+  var tabs=document.getElementById('nbTabs');tabs.innerHTML='';
+  var allTab=document.createElement('button');allTab.className='nb-tab';
+  allTab.innerHTML='全部 <span class="tc">'+getAllNBCount()+'</span>';
+  allTab.onclick=function(){nbActiveLevel=null;renderNBTab(null);setActiveTab(allTab);};
+  tabs.appendChild(allTab);
+  var first=null;
+  [2,3,4,5,6].forEach(function(lv){
+    var cnt=getNB(lv).length;
+    var t=document.createElement('button');t.className='nb-tab';
+    t.innerHTML='Lv'+lv+' <span class="tc">'+cnt+'</span>';
+    t.onclick=(function(l,b){return function(){nbActiveLevel=l;renderNBTab(l);setActiveTab(b);};})(lv,t);
+    tabs.appendChild(t);
+    if(cnt>0&&!first)first=lv;
+  });
+  if(forceLevel!=null)nbActiveLevel=forceLevel;
+  else if(nbActiveLevel==null)nbActiveLevel=first;
+  var tbs=tabs.querySelectorAll('.nb-tab');
+  if(nbActiveLevel==null)setActiveTab(tbs[0]);
+  else tbs.forEach(function(b){if(b.textContent.trim().startsWith('Lv'+nbActiveLevel))setActiveTab(b);});
+  renderNBTab(nbActiveLevel);
+  document.getElementById('nbTotalCount').textContent='共 '+getAllNBCount()+' 字';
+}
+function setActiveTab(el){document.querySelectorAll('.nb-tab').forEach(function(b){b.classList.remove('active');});el.classList.add('active');}
+function renderNBTab(level){
+  nbActiveLevel=level;
+  var words=level==null?[2,3,4,5,6].reduce(function(a,lv){return a.concat(getNB(lv));},[]): getNB(level);
+  // 已按 addedTs 排序（最新在前，addToNB 時用 unshift）
+  var list=document.getElementById('nbWordList');list.innerHTML='';
+  if(words.length===0){
+    list.innerHTML='<div class="nb-empty">這個程度目前沒有錯題 🎉</div>';
+    var pb=document.getElementById('nbPracticeBtn');
+    if(pb)pb.style.display='none';
+    renderNBCopyBar([]);
+    return;
+  }
+  var pb=document.getElementById('nbPracticeBtn');
+  if(pb)pb.style.display='block';
+  renderNBCopyBar(words);
+  words.forEach(function(w){
+    var row=document.createElement('div');row.className='word-row';
+    row.innerHTML=
+      '<input type="checkbox" class="nb-check" data-en="'+escJs(w.en)+'" data-pos="'+escJs(w.pos)+'" data-zh="'+escJs(w.zh)+'" checked style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">'+
+      '<div class="word-row-info">'+
+        '<div class="word-row-en">'+w.en+'</div>'+
+        '<div><span class="word-row-pos">'+w.pos+'</span> <span class="word-row-zh">'+w.zh+'</span></div>'+
+      '</div>'+
+      '<div class="word-row-btns">'+
+        '<button class="icon-btn" onclick="speakText(\''+escJs(w.en)+'\')">🔊</button>'+
+        '<button class="icon-btn" onclick="copyWord(\''+escJs(w.zh)+' '+escJs(w.pos)+' '+escJs(w.en)+'\')">📋</button>'+
+        '<button class="icon-btn del" onclick="removeWordFromNB('+w.level+',\''+escJs(w.en)+'\')">✕</button>'+
+      '</div>';
+    list.appendChild(row);
+  });
+  document.getElementById('nbTotalCount').textContent='共 '+getAllNBCount()+' 字';
+}
+function renderNBCopyBar(words){
+  var bar=document.getElementById('nbCopyBar');
+  if(!bar)return;
+  if(words.length===0){bar.style.display='none';return;}
+  bar.style.display='flex';
+}
+function nbSelectAll(checked){
+  document.querySelectorAll('.nb-check').forEach(function(cb){cb.checked=checked;});
+}
+function nbCopyChecked(){
+  var lines=[];
+  document.querySelectorAll('.nb-check:checked').forEach(function(cb){
+    lines.push(cb.getAttribute('data-zh')+' '+cb.getAttribute('data-pos')+' '+cb.getAttribute('data-en'));
+  });
+  if(lines.length===0){showToast('請先勾選要複製的字');return;}
+  var text=lines.join('\n');
+  if(navigator.clipboard)navigator.clipboard.writeText(text).then(function(){showToast('已複製 '+lines.length+' 個字 📋');});
+  else{var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('已複製 '+lines.length+' 個字 📋');}
+}
+function escJs(s){return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+function removeWordFromNB(lv,en){removeFromNB(lv,en);updateLevelBadges();buildNotebook(nbActiveLevel);}
+function copyWord(text){
+  if(navigator.clipboard)navigator.clipboard.writeText(text).then(function(){showToast('已複製！');});
+  else{var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('已複製！');}
+}
+
+/* ═══════ MODAL / TOAST ═══════ */
+function showModal(title,msg,btns){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalMsg').innerHTML=msg.replace(/\n/g,'<br>');
+  var bc=document.getElementById('modalBtns');bc.innerHTML='';
+  btns.forEach(function(b){var btn=document.createElement('button');btn.className=b.cls;btn.textContent=b.label;btn.onclick=b.fn;bc.appendChild(btn);});
+  document.getElementById('modalOverlay').style.display='flex';
+}
+function closeModal(){document.getElementById('modalOverlay').style.display='none';}
+function showToast(msg){var t=document.getElementById('copyToast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+
+/* ═══════ TTS ═══════ */
+function speakText(t){if(!window.speechSynthesis)return;var u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=0.85;speechSynthesis.cancel();speechSynthesis.speak(u);}
+
+/* ═══════ KEYBOARD ═══════ */
+function onKey(e){
+  var a=document.querySelector('.screen.active');if(!a)return;
+  if(a.id==='scan'&&!qActive){if(e.key==='z'||e.key==='Z')markKnow();if(e.key==='x'||e.key==='X')markUnknown();}
+  if(a.id==='drill'||a.id==='reviewTest'){
+    var nextBtn=document.getElementById(a.id==='drill'?'drillNext':'reviewNext');
+    if((e.key==='Enter'||e.key===' ')&&nextBtn&&nextBtn.style.display!=='none'){
+      if(a.id==='drill')nextDrill();else nextReview();
+    }
+  }
+}
+
+/* ═══════ UTIL ═══════ */
+function shuffle(a){var arr=a.slice();for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=arr[i];arr[i]=arr[j];arr[j]=t;}return arr;}
+
+/* ═══════ FOLDER UI ═══════ */
+var activeFolderId=null;
+var folderDrillQueue=[],folderDrillIdx=0,folderDrillScore={c:0,total:0},folderDrillWord=null;
+var folderDrillResults=[];
+var _currentFolderQuiz=null;
+
 
 function promptCreateFolder(){
   var name=prompt('請輸入資料夾名稱（例如：翰林第三冊第五課）：');
@@ -2048,87 +2632,13 @@ function renderFolderWordList(folderId){
 }
 
 /* ── FOLDER DRILL ── */
-function startFolderDrill(folderId){
-  var f=getFolderById(folderId);
-  if(!f||f.words.length===0)return;
-  activeFolderId=folderId;
-  folderDrillQueue=shuffle(f.words.slice());
-  folderDrillIdx=0;
-  folderDrillScore={c:0,total:folderDrillQueue.length};
-  folderDrillResults=[];
-  resetAnswerPositions();resetDirectionCounts();
-  document.getElementById('folderDrillTitle').textContent='📁 '+f.name;
-  showScreen('folderDrill');
-  renderFolderDrill();
-}
-function renderFolderDrill(){
-  if(folderDrillIdx>=folderDrillQueue.length){showFolderDrillResult();return;}
-  folderDrillWord=folderDrillQueue[folderDrillIdx];
-  document.getElementById('folderDrillQuestion').textContent=folderDrillWord.en;
-  document.getElementById('folderDrillPos').textContent=folderDrillWord.pos;
-  document.getElementById('folderDrillCtr').textContent=(folderDrillIdx+1)+' / '+folderDrillQueue.length;
-  document.getElementById('folderDrillProg').style.width=(folderDrillIdx/folderDrillQueue.length*100)+'%';
-  document.getElementById('folderDrillFb').textContent='';
-  document.getElementById('folderDrillNext').style.display='none';
 
-  // Use full allWords pool for distractors, supplemented by folder words
-  var pool=allWords.length>0?allWords:folderDrillQueue;
-  var _fdir=getNextDirection();var qdata=buildQuizOptionsWithDirection(folderDrillWord,pool,_fdir,getNextAnswerPosition());
-  _currentFolderQuiz=qdata;
 
-  var lbl=document.getElementById('folderDrillLabel');
-  if(lbl)lbl.textContent=qdata.direction==='en2zh'?'選出正確的中文意思：':'選出正確的英文單字：';
 
-  // Show question word
-  var qWord=document.getElementById('folderDrillQuestion');
-  if(qWord){
-    qWord.textContent=qdata.direction==='en2zh'?folderDrillWord.en:folderDrillWord.zh;
-    qWord.style.fontSize=qdata.direction==='en2zh'?'2.4rem':'1.8rem';
-  }
 
-  var c=document.getElementById('folderDrillOpts');c.innerHTML='';
-  qdata.opts.forEach(function(opt){
-    var b=document.createElement('button');b.className='drill-opt';b.textContent=opt;
-    b.style.fontSize=isChinese(opt)?'1.5rem':'1.8rem';
-    b.addEventListener('click',(function(o,btn){return function(){answerFolderDrill(o,btn);};})(opt,b));
-    c.appendChild(b);
-  });
-  if(qdata.direction==='en2zh')speakText(folderDrillWord.en);
-}
-function answerFolderDrill(ans,btn){
-  var correctAns=_currentFolderQuiz.correctAnswer;
-  var ok=ans===correctAns;
-  document.querySelectorAll('#folderDrillOpts .drill-opt').forEach(function(b){
-    b.disabled=true;
-    if(b.textContent===correctAns)b.classList.add('correct');
-    else if(b===btn&&!ok)b.classList.add('wrong');
-  });
-  var fb=document.getElementById('folderDrillFb');
-  var showCorrect=_currentFolderQuiz.direction==='en2zh'?folderDrillWord.zh:folderDrillWord.en;
-  if(ok){folderDrillScore.c++;fb.textContent='✅ 答對了！';fb.style.color='var(--know)';folderDrillResults.push({word:folderDrillWord,correct:true});}
-  else{fb.innerHTML='❌ 正確答案：<strong>'+showCorrect+'</strong>';fb.style.color='var(--unknown)';folderDrillResults.push({word:folderDrillWord,correct:false});folderDrillQueue.push(folderDrillWord);}
-  document.getElementById('folderDrillNext').style.display='block';
-}
-function nextFolderDrill(){folderDrillIdx++;renderFolderDrill();}
-function speakFolderDrill(){if(folderDrillWord)speakText(folderDrillWord.en);}
 
-function showFolderDrillResult(){
-  var f=getFolderById(activeFolderId);
-  addFolderLog(f?f.name:'資料夾',folderDrillScore.total,folderDrillScore.c);
-  var pct=Math.round(folderDrillScore.c/folderDrillScore.total*100);
-  document.getElementById('folderResultTitle').textContent='練習完成 🏆';
-  document.getElementById('folderResultSub').textContent='答對 '+folderDrillScore.c+' / '+folderDrillScore.total+' （'+pct+'%）';
 
-  var seen={};folderDrillResults.forEach(function(r){seen[r.word.en]=r;});
-  var list=document.getElementById('folderResultList');list.innerHTML='';
-  Object.values(seen).forEach(function(r){
-    var row=document.createElement('div');row.className='word-check-row';
-    row.innerHTML='<div class="word-check-info"><div class="word-check-en">'+r.word.en+' <span style="color:var(--text2);font-size:.75rem;font-style:italic">'+r.word.pos+'</span></div><div class="word-check-zh">'+r.word.zh+'</div></div>'+
-      '<span class="word-check-result '+(r.correct?'correct':'wrong')+'">'+(r.correct?'答對':'答錯')+'</span>';
-    list.appendChild(row);
-  });
-  showScreen('folderDrillResult');
-}
+
 
 
 
