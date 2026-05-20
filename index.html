@@ -547,11 +547,10 @@ h1 span{color:var(--accent)}
     <h2 style="font-size:1.1rem;font-weight:700;flex:1;">📁 <span id="searchFolderName"></span></h2>
     <button onclick="gotoHome()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:7px 12px;font-size:.8rem;cursor:pointer;">完成</button>
   </div>
-  <div style="width:100%;display:flex;gap:8px;margin-bottom:6px;align-items:center;">
+  <div style="width:100%;margin-bottom:6px;">
     <input id="searchInput" type="text" placeholder="輸入英文字母搜尋..." oninput="onSearchInput()"
-      style="flex:1;background:var(--surface);border:2px solid var(--border);border-radius:12px;color:var(--text);padding:13px 16px;font-size:1rem;outline:none;"
-      onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-    <button onclick="clearSearchInput()" id="searchClearBtn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);width:44px;height:44px;border-radius:10px;font-size:1.1rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>
+      style="width:calc(100% - 54px);background:var(--surface);border:2px solid var(--border);border-radius:12px;color:var(--text);padding:13px 16px;font-size:1rem;outline:none;vertical-align:middle;"
+      onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"><button onclick="clearSearchInput()" id="searchClearBtn" style="width:46px;height:46px;background:#2e3150;border:1px solid var(--border);color:#9ea3c0;border-radius:10px;font-size:1.1rem;cursor:pointer;vertical-align:middle;margin-left:4px;">✕</button>
   </div>
   <div id="searchDropdown" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden;max-height:280px;overflow-y:auto;"></div>
   <div id="searchWordList" style="width:100%;"></div>
