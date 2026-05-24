@@ -400,9 +400,14 @@ body.scan-active .global-nav{display:none;}
 }
 .teacher-portal-tab:hover{color:var(--accent);box-shadow:-6px 2px 22px rgba(108,99,255,.25);transform:translateY(-50%) translateX(-2px);}
 #home:not(.active) .teacher-portal-tab{display:none;}
+.boot-error{display:none;width:100%;max-width:min(640px,100%);margin:0 auto 12px;padding:12px 14px;border-radius:12px;background:#2a1515;border:1px solid var(--unknown);color:#ffb4b4;font-size:.85rem;line-height:1.5;}
+.boot-error strong{color:#fff;}
 </style>
+<script src="class-config.js"></script>
+<script src="student-sync.js"></script>
 </head>
 <body>
+<div id="bootError" class="boot-error" role="alert"></div>
 <div class="copy-toast" id="copyToast"></div>
 <div class="hint-popover-backdrop" id="scanHintBackdrop" onclick="closeScanHint()"></div>
 
@@ -1922,8 +1927,22 @@ function addLog(type,detail,score){
 function getTotalCorrect(){return getLog().reduce(function(s,e){return s+(e.score||0);},0);}
 
 /* ═══════ INIT ═══════ */
-window.onload=function(){
-  allWords=JSON.parse(document.getElementById('wdata').textContent);
+function showBootError(msg){
+  var el=document.getElementById('bootError');
+  if(!el)return;
+  el.style.display='block';
+  el.innerHTML='<strong>頁面載入不完整</strong><br>'+msg+
+    '<br><span style="color:var(--text2);font-size:.78rem;">請確認 GitHub 已上傳 index.html（約 600KB）、class-config.js、student-sync.js，並用 Ctrl+Shift+R 強制重新整理。</span>';
+}
+function bootApp(){
+  if(typeof CLASS_CONFIG==='undefined')throw new Error('找不到 class-config.js（教師／班級設定）');
+  if(typeof initStudentGate!=='function')throw new Error('找不到 student-sync.js（學生登入與同步）');
+  var wdataEl=document.getElementById('wdata');
+  if(!wdataEl||!wdataEl.textContent||wdataEl.textContent.length<10000){
+    throw new Error('單字資料 wdata 缺失或檔案被截斷（index.html 應約 600KB）');
+  }
+  allWords=JSON.parse(wdataEl.textContent);
+  if(!allWords||!allWords.length)throw new Error('單字資料是空的');
   backupAllProgress('on-load');
   var vocabVer='lv1-6-6725';
   if(localStorage.getItem('vocab_list_version')!==vocabVer){
@@ -1939,8 +1958,14 @@ window.onload=function(){
   document.addEventListener('keydown',onKey);
   initFirebase();
   initStudentGate();
-  // 延遲一秒再檢查，讓頁面先完成載入
   setTimeout(checkVocab7000Import,1000);
+}
+window.onload=function(){
+  try{bootApp();}
+  catch(e){
+    console.error('boot failed',e);
+    showBootError((e&&e.message)?e.message:String(e));
+  }
 };
 
 /* ═══════ HOME ═══════ */
