@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7000單 · 教師後台</title>
+<style>
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#232736;--accent:#6c63ff;--text:#e8eaf6;--text2:#9ea3c0;--know:#43d9ad;--warn:#f5a623;--border:#2e3150;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);padding:16px;line-height:1.45;}
+.wrap{max-width:1100px;margin:0 auto;}
+h1{font-size:1.35rem;margin-bottom:4px}
+.sub{color:var(--text2);font-size:.85rem;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
+.card input,.card select{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px;margin:6px 8px 6px 0;font-size:.9rem;}
+button{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;font-size:.88rem;}
+button.secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+button.warn{background:#3a2a10;color:var(--warn);border:1px solid var(--warn);}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.tab{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:.85rem;}
+.tab.active{border-color:var(--accent);color:var(--accent);background:#1e1f3a;}
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+th,td{padding:9px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;}
+th{background:var(--surface2);color:var(--text2);}
+tr{cursor:pointer}
+tr:hover td{background:rgba(108,99,255,.08)}
+tr.selected td{background:rgba(108,99,255,.15)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.badge-off{color:var(--warn);font-size:.75rem}
+.layout{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:900px){.layout.has-detail{grid-template-columns:1fr 1fr;}}
+.detail h3{font-size:1rem;margin-bottom:8px}
+.event{ font-size:.78rem;border-bottom:1px solid var(--border);padding:8px 0;}
+.event .t{color:var(--text2)}
+.event .a{color:var(--accent);font-weight:600}
+.folder-row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:.8rem;}
+.rename-box{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.rename-box input{width:100%;max-width:280px;}
+code{font-size:.78rem;color:var(--know)}
+</style>
+<script src="class-config.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>📊 教師後台 · 班級進度</h1>
+  <p class="sub">免費 Firebase 同步。帳號 <code>teacher3388</code>（密碼請勿分享給學生）。</p>
+
+  <div class="card" id="loginBox">
+    <p style="margin-bottom:8px;font-size:.9rem;">教師登入</p>
+    <input id="loginUser" placeholder="帳號" autocomplete="username">
+    <input id="loginPass" type="password" placeholder="密碼" autocomplete="current-password">
+    <button type="button" onclick="doLogin()">登入</button>
+  </div>
+
+  <div id="dash" style="display:none">
+    <div class="card">
+      <div class="tabs" id="gradeTabs"></div>
+      <div class="tabs" id="classTabs"></div>
+      <p class="sub" id="metaLine" style="margin:0 0 10px"></p>
+      <button type="button" class="secondary" onclick="loadRoster()">🔄 重新整理</button>
+    </div>
+
+    <div class="layout" id="mainLayout">
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>座號</th>
+              <th>顯示名稱</th>
+              <th class="num">已掌握</th>
+              <th class="num">錯題</th>
+              <th>最後活動</th>
+            </tr>
+          </thead>
+          <tbody id="rosterBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card detail" id="detailPanel" style="display:none">
+        <h3 id="detailTitle">學生詳情</h3>
+        <p class="sub" id="detailSub" style="margin-bottom:10px"></p>
+
+        <div class="rename-box">
+          <p style="font-size:.85rem;margin-bottom:6px">修改顯示名稱（不雅暱稱可在這裡覆蓋，不刪學生資料）</p>
+          <input id="renameInput" placeholder="新顯示名稱">
+          <button type="button" onclick="saveRename()">儲存名稱</button>
+          <button type="button" class="secondary" onclick="clearRename()">恢復原暱稱</button>
+        </div>
+
+        <h4 style="margin:16px 0 8px;font-size:.9rem">📁 各資料夾練習次數</h4>
+        <div id="folderStats"></div>
+
+        <h4 style="margin:16px 0 8px;font-size:.9rem">🕐 活動紀錄（最近 80 筆）</h4>
+        <div id="eventList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var FB_URL = CLASS_CONFIG.FB_URL;
+var activeGrade = 'g2';
+var activeClass = 'zhong';
+var rosterRows = [];
+var selectedKey = null;
+var selectedRow = null;
+
+function doLogin() {
+  var u = document.getElementById('loginUser').value.trim();
+  var p = document.getElementById('loginPass').value;
+  if (u === CLASS_CONFIG.TEACHER_USER && p === CLASS_CONFIG.TEACHER_PASS) {
+    sessionStorage.setItem('teacher_auth', '1');
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('dash').style.display = 'block';
+    buildTabs();
+    loadRoster();
+  } else {
+    alert('帳號或密碼錯誤');
+  }
+}
+if (sessionStorage.getItem('teacher_auth') === '1') {
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('dash').style.display = 'block';
+}
+
+function classKey() {
+  return cfgBuildClassKey(activeGrade, activeClass);
+}
+function buildTabs() {
+  var gt = document.getElementById('gradeTabs');
+  gt.innerHTML = '';
+  CLASS_CONFIG.GRADES.forEach(function (g) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tab' + (g.id === activeGrade ? ' active' : '');
+    b.textContent = g.label;
+    b.onclick = function () {
+      activeGrade = g.id;
+      buildTabs();
+      loadRoster();
+    };
+    gt.appendChild(b);
+  });
+  var ct = document.getElementById('classTabs');
+  ct.innerHTML = '';
+  CLASS_CONFIG.CLASSES.forEach(function (c) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tab' + (c.id === activeClass ? ' active' : '');
+    b.textContent = c.label;
+    b.onclick = function () {
+      activeClass = c.id;
+      buildTabs();
+      loadRoster();
+    };
+    ct.appendChild(b);
+  });
+}
+
+function fbGet(path) {
+  return fetch(FB_URL + '/' + path + '.json').then(function (r) {
+    return r.json();
+  });
+}
+function fbPut(path, data) {
+  return fetch(FB_URL + '/' + path + '.json', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).then(function (r) {
+    return r.json();
+  });
+}
+
+function displayName(pr) {
+  if (!pr) return '—';
+  if (pr.nameOverride && String(pr.nameOverride).trim()) return String(pr.nameOverride).trim();
+  return pr.nickname || pr.displayName || '—';
+}
+
+function loadRoster() {
+  selectedKey = null;
+  selectedRow = null;
+  document.getElementById('detailPanel').style.display = 'none';
+  document.getElementById('mainLayout').classList.remove('has-detail');
+  var label = cfgFormatClassLabel(activeGrade, activeClass, '');
+  document.getElementById('metaLine').textContent = label + ' · 載入中…';
+  fbGet('classrooms/' + classKey() + '/students')
+    .then(function (data) {
+      rosterRows = [];
+      if (data && typeof data === 'object') {
+        Object.keys(data).forEach(function (key) {
+          var node = data[key] || {};
+          var pr = node.profile || {};
+          var pg = node.progress || {};
+          rosterRows.push({
+            key: key,
+            profile: pr,
+            progress: pg,
+          });
+        });
+      }
+      rosterRows.sort(function (a, b) {
+        var sa = parseInt(a.profile.seat, 10);
+        var sb = parseInt(b.profile.seat, 10);
+        if (!isNaN(sa) && !isNaN(sb) && sa !== sb) return sa - sb;
+        return (b.progress.updatedAt || 0) - (a.progress.updatedAt || 0);
+      });
+      renderRoster();
+      document.getElementById('metaLine').textContent =
+        label + ' · 已登入 ' + rosterRows.length + ' 人 · ' + new Date().toLocaleString('zh-TW');
+    })
+    .catch(function (e) {
+      document.getElementById('metaLine').textContent = '讀取失敗：' + e;
+    });
+}
+
+function renderRoster() {
+  var tb = document.getElementById('rosterBody');
+  tb.innerHTML = '';
+  if (rosterRows.length === 0) {
+    tb.innerHTML =
+      '<tr><td colspan="5" style="color:var(--text2)">尚無學生（請學生先開 index.html 完成身分登記）</td></tr>';
+    return;
+  }
+  rosterRows.forEach(function (row) {
+    var pr = row.profile;
+    var pg = row.progress || {};
+    var tr = document.createElement('tr');
+    if (row.key === selectedKey) tr.className = 'selected';
+    var ts = pg.updatedAt || pr.lastSeen;
+    var when = ts ? new Date(ts).toLocaleString('zh-TW') : '—';
+    var nickHtml = escapeHtml(displayName(pr));
+    if (pr.nameOverride) nickHtml += ' <span class="badge-off">已改名</span>';
+    tr.innerHTML =
+      '<td>' +
+      escapeHtml(pr.seat || '—') +
+      '</td><td>' +
+      nickHtml +
+      '</td><td class="num">' +
+      (pg.masteredTotal || 0) +
+      '</td><td class="num">' +
+      (pg.nbTotal || 0) +
+      '</td><td class="stale">' +
+      when +
+      '</td>';
+    tr.onclick = function () {
+      selectStudent(row);
+    };
+    tb.appendChild(tr);
+  });
+}
+
+function selectStudent(row) {
+  selectedKey = row.key;
+  selectedRow = row;
+  document.getElementById('detailPanel').style.display = 'block';
+  document.getElementById('mainLayout').classList.add('has-detail');
+  var pr = row.profile;
+  document.getElementById('detailTitle').textContent =
+    displayName(pr) + (pr.seat && pr.seat !== '00' ? '（#' + pr.seat + '）' : '');
+  document.getElementById('detailSub').textContent =
+    (pr.classLabel || '') + ' · 原暱稱：' + (pr.nickname || '—');
+  document.getElementById('renameInput').value = pr.nameOverride || '';
+  renderRoster();
+  loadStudentDetail(row);
+}
+
+function loadStudentDetail(row) {
+  var base = 'classrooms/' + classKey() + '/students/' + row.key;
+  document.getElementById('folderStats').innerHTML = '<p class="sub">載入中…</p>';
+  document.getElementById('eventList').innerHTML = '';
+  Promise.all([fbGet(base + '/folderPractice'), fbGet(base + '/events')]).then(function (res) {
+    var folderPractice = res[0] || {};
+    var eventsRaw = res[1] || {};
+    var fs = document.getElementById('folderStats');
+    var fkeys = Object.keys(folderPractice);
+    if (fkeys.length === 0) {
+      fs.innerHTML = '<p class="sub">尚無資料夾練習紀錄</p>';
+    } else {
+      fs.innerHTML = '';
+      fkeys
+        .map(function (k) {
+          return folderPractice[k];
+        })
+        .sort(function (a, b) {
+          return (b.sessions || 0) - (a.sessions || 0);
+        })
+        .forEach(function (f) {
+          var div = document.createElement('div');
+          div.className = 'folder-row';
+          div.innerHTML =
+            '<span>📁 ' +
+            escapeHtml(f.name || '資料夾') +
+            '</span><span>' +
+            (f.sessions || 0) +
+            ' 次 · 答對 ' +
+            (f.correct || 0) +
+            '/' +
+            (f.questions || 0) +
+            '</span>';
+          fs.appendChild(div);
+        });
+    }
+    var events = Object.keys(eventsRaw)
+      .map(function (k) {
+        var e = eventsRaw[k];
+        e._id = k;
+        return e;
+      })
+      .sort(function (a, b) {
+        return (b.ts || 0) - (a.ts || 0);
+      })
+      .slice(0, 80);
+    var el = document.getElementById('eventList');
+    if (events.length === 0) {
+      el.innerHTML = '<p class="sub">尚無活動紀錄</p>';
+      return;
+    }
+    el.innerHTML = '';
+    events.forEach(function (e) {
+      var div = document.createElement('div');
+      div.className = 'event';
+      var when = (e.date || '') + ' ' + (e.time || '');
+      if (e.ts) when = new Date(e.ts).toLocaleString('zh-TW');
+      div.innerHTML =
+        '<div class="t">' +
+        escapeHtml(when) +
+        '</div><div class="a">' +
+        escapeHtml(actionLabel(e.action)) +
+        '</div><div>' +
+        escapeHtml(e.detail || '') +
+        '</div>';
+      el.appendChild(div);
+    });
+  });
+}
+
+function actionLabel(a) {
+  var map = {
+    login: '登入',
+    scan_start: '開始快篩',
+    scan_end: '完成快篩',
+    folder_start: '開始資料夾練習',
+    folder_end: '完成資料夾練習',
+    notebook_drill: '錯題本練習',
+    review_test: '複習測驗',
+  };
+  return map[a] || a || '活動';
+}
+
+function saveRename() {
+  if (!selectedRow) return;
+  var name = document.getElementById('renameInput').value.trim();
+  var base = 'classrooms/' + classKey() + '/students/' + selectedRow.key;
+  fbGet(base).then(function (node) {
+    node = node || {};
+    node.profile = node.profile || {};
+    node.profile.nameOverride = name;
+    node.profile.displayName = name || node.profile.nickname;
+    return fbPut(base, node);
+  }).then(function () {
+    alert('已更新顯示名稱');
+    loadRoster();
+    if (selectedRow) {
+      selectedRow.profile.nameOverride = name;
+      selectStudent(selectedRow);
+    }
+  });
+}
+
+function clearRename() {
+  document.getElementById('renameInput').value = '';
+  saveRename();
+}
+
+function escapeHtml(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+if (sessionStorage.getItem('teacher_auth') === '1') {
+  buildTabs();
+  loadRoster();
+}
+</script>
+</body>
+</html>
