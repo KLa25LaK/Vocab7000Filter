@@ -319,7 +319,8 @@ function fbSyncStudentProgress(force) {
     },
     progress: collectProgressSummary(),
   };
-  return fbRestPut(base, payload)
+  var patchFn = typeof fbRestPatch === 'function' ? fbRestPatch : fbRestPut;
+  return patchFn(base, payload)
     .then(function () {
       if (force) renderStudentProfileBar();
     })
@@ -391,7 +392,10 @@ function initStudentGate() {
   if (getStudentProfile()) {
     hideStudentGate();
     renderStudentProfileBar();
-    fbSyncStudentProgress(false);
+    fbSyncStudentProgress(true);
+    setTimeout(function () {
+      scheduleProgressSync();
+    }, 4000);
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) scheduleProgressSync();
     });

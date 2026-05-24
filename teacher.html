@@ -76,16 +76,17 @@ code{font-size:.78rem;color:var(--know)}
   <div class="top-actions">
     <div>
       <h1>📊 教師後台 · 班級進度</h1>
-      <p class="sub" style="margin-bottom:0">免費 Firebase 同步。帳號 <code>teacher3388</code>（密碼請勿分享給學生）。</p>
+      <p class="sub" style="margin-bottom:0">免費 Firebase 同步 · 教師專用（請勿將密碼提供給學生）</p>
     </div>
     <a href="index.html" class="back-home">← 返回學生首頁</a>
   </div>
 
   <div class="card" id="loginBox">
     <p style="margin-bottom:8px;font-size:.9rem;">教師登入</p>
-    <input id="loginUser" placeholder="帳號" autocomplete="username">
-    <input id="loginPass" type="password" placeholder="密碼" autocomplete="current-password">
-    <button type="button" onclick="doLogin()">登入</button>
+    <p class="sub" style="margin:0 0 12px">請輸入教師密碼</p>
+    <input id="loginUser" type="hidden" autocomplete="username" tabindex="-1" aria-hidden="true">
+    <input id="loginPass" type="password" placeholder="密碼" autocomplete="current-password" style="width:100%;max-width:320px;">
+    <button type="button" onclick="doLogin()" style="margin-top:10px">登入</button>
   </div>
 
   <div id="dash" style="display:none">
@@ -147,21 +148,24 @@ var selectedKey = null;
 var selectedRow = null;
 
 function doLogin() {
-  var u = document.getElementById('loginUser').value.trim();
+  var u = CLASS_CONFIG.TEACHER_USER;
   var p = document.getElementById('loginPass').value;
-  if (u === CLASS_CONFIG.TEACHER_USER && p === CLASS_CONFIG.TEACHER_PASS) {
+  if (u && p === CLASS_CONFIG.TEACHER_PASS) {
     sessionStorage.setItem('teacher_auth', '1');
     document.getElementById('loginBox').style.display = 'none';
     document.getElementById('dash').style.display = 'block';
     buildTabs();
     loadRoster();
   } else {
-    alert('帳號或密碼錯誤');
+    alert('密碼錯誤');
   }
 }
 if (sessionStorage.getItem('teacher_auth') === '1') {
   document.getElementById('loginBox').style.display = 'none';
   document.getElementById('dash').style.display = 'block';
+} else {
+  var lu = document.getElementById('loginUser');
+  if (lu) lu.value = CLASS_CONFIG.TEACHER_USER;
 }
 
 function classKey() {
@@ -292,6 +296,46 @@ function renderRoster() {
   });
 }
 
+function resolveAchievement(pg) {
+  pg = pg || {};
+  if (pg.achievement && pg.achievement.levels && pg.achievement.levels.length) {
+    return pg.achievement;
+  }
+  var counts = CLASS_CONFIG.LEVEL_WORD_COUNTS || {};
+  var byLevel = pg.byLevel || {};
+  var nbByLevel = pg.nbByLevel || {};
+  var levels = [];
+  [1, 2, 3, 4, 5, 6].forEach(function (lv) {
+    var tot = counts[lv] || 0;
+    var mastered = byLevel['lv' + lv] || 0;
+    var nb = nbByLevel['lv' + lv] || 0;
+    var rem = Math.max(0, tot - mastered);
+    levels.push({
+      lv: lv,
+      tot: tot,
+      mastered: mastered,
+      rem: rem,
+      nb: nb,
+      pct: tot > 0 ? Math.round((mastered / tot) * 100) : 0,
+    });
+  });
+  var hasAny = levels.some(function (s) {
+    return s.mastered > 0 || s.nb > 0;
+  });
+  if (!hasAny && !pg.masteredTotal) return null;
+  return {
+    todayMastered: 0,
+    weekMastered: 0,
+    batchTotal: 0,
+    streak: 0,
+    levels: levels,
+    batchDays: [],
+    lastSession: null,
+    recentLogs: [],
+    _legacy: true,
+  };
+}
+
 function selectStudent(row) {
   selectedKey = row.key;
   selectedRow = row;
@@ -303,20 +347,43 @@ function selectStudent(row) {
   document.getElementById('detailSub').textContent =
     (pr.classLabel || '') + ' · 原暱稱：' + (pr.nickname || '—');
   document.getElementById('renameInput').value = pr.nameOverride || '';
-  renderStudentAchievement(row.progress || {});
+  document.getElementById('studentAchievement').innerHTML =
+    '<p class="sub">載入學生資料中…</p>';
   renderRoster();
-  loadStudentDetail(row);
+  var base = 'classrooms/' + classKey() + '/students/' + row.key;
+  fbGet(base)
+    .then(function (node) {
+      node = node || {};
+      selectedRow = {
+        key: row.key,
+        profile: node.profile || row.profile || {},
+        progress: node.progress || row.progress || {},
+        events: node.events || {},
+        folderPractice: node.folderPractice || {},
+      };
+      renderStudentAchievement(selectedRow.progress, selectedRow);
+      renderFolderStatsPanel(selectedRow);
+      renderEventList(selectedRow.events);
+    })
+    .catch(function (e) {
+      document.getElementById('studentAchievement').innerHTML =
+        '<div class="ach-stale">讀取失敗：' + escapeHtml(String(e)) + '</div>';
+    });
 }
 
-function renderStudentAchievement(pg) {
+function renderStudentAchievement(pg, fullRow) {
   var el = document.getElementById('studentAchievement');
   if (!el) return;
-  var ach = pg.achievement;
+  pg = pg || {};
+  var ach = resolveAchievement(pg);
   var mastered = pg.masteredTotal || 0;
   var nb = pg.nbTotal || 0;
+  var updated = pg.updatedAt
+    ? new Date(pg.updatedAt).toLocaleString('zh-TW')
+    : '—';
   if (!ach) {
     el.innerHTML =
-      '<div class="ach-stale">此學生尚無完整成就資料（請學生重新開啟首頁並練習一下，約數秒後按「重新整理」）。</div>' +
+      '<div class="ach-stale">尚無同步資料。請學生開啟 <strong>index.html</strong> 完成身分登記，並在首頁或成就頁停留約 5 秒後，再按「重新整理」。</div>' +
       '<div class="ach-summary" style="margin-top:10px">' +
       '<div class="ach-card"><div class="ach-num">' +
       mastered +
@@ -327,7 +394,11 @@ function renderStudentAchievement(pg) {
       '</div>';
     return;
   }
-  var html =
+  var legacyNote = ach._legacy
+    ? '<p class="sub" style="margin:0 0 8px;color:var(--warn)">此為舊版同步資料（各級進度已還原）。請學生重新開啟首頁以更新完整成就。</p>'
+    : '<p class="sub" style="margin:0 0 8px">最後同步：' + escapeHtml(updated) + '</p>';
+  var html = legacyNote;
+  html +=
     '<div class="ach-summary">' +
     '<div class="ach-card"><div class="ach-num">' +
     mastered +
@@ -450,73 +521,96 @@ function renderStudentAchievement(pg) {
   el.innerHTML = html;
 }
 
-function loadStudentDetail(row) {
-  var base = 'classrooms/' + classKey() + '/students/' + row.key;
-  document.getElementById('folderStats').innerHTML = '<p class="sub">載入中…</p>';
-  document.getElementById('eventList').innerHTML = '';
-  Promise.all([fbGet(base + '/folderPractice'), fbGet(base + '/events')]).then(function (res) {
-    var folderPractice = res[0] || {};
-    var eventsRaw = res[1] || {};
-    var fs = document.getElementById('folderStats');
-    var fkeys = Object.keys(folderPractice);
-    if (fkeys.length === 0) {
-      fs.innerHTML = '<p class="sub">尚無資料夾練習紀錄</p>';
-    } else {
-      fs.innerHTML = '';
-      fkeys
-        .map(function (k) {
-          return folderPractice[k];
-        })
-        .sort(function (a, b) {
-          return (b.sessions || 0) - (a.sessions || 0);
-        })
-        .forEach(function (f) {
-          var div = document.createElement('div');
-          div.className = 'folder-row';
-          div.innerHTML =
-            '<span>📁 ' +
-            escapeHtml(f.name || '資料夾') +
-            '</span><span>' +
-            (f.sessions || 0) +
-            ' 次 · 答對 ' +
-            (f.correct || 0) +
-            '/' +
-            (f.questions || 0) +
-            '</span>';
-          fs.appendChild(div);
-        });
-    }
-    var events = Object.keys(eventsRaw)
-      .map(function (k) {
-        var e = eventsRaw[k];
-        e._id = k;
-        return e;
-      })
-      .sort(function (a, b) {
-        return (b.ts || 0) - (a.ts || 0);
-      })
-      .slice(0, 80);
-    var el = document.getElementById('eventList');
-    if (events.length === 0) {
-      el.innerHTML = '<p class="sub">尚無活動紀錄</p>';
-      return;
-    }
-    el.innerHTML = '';
-    events.forEach(function (e) {
-      var div = document.createElement('div');
-      div.className = 'event';
-      var when = (e.date || '') + ' ' + (e.time || '');
-      if (e.ts) when = new Date(e.ts).toLocaleString('zh-TW');
-      div.innerHTML =
-        '<div class="t">' +
-        escapeHtml(when) +
-        '</div><div class="a">' +
-        escapeHtml(actionLabel(e.action)) +
-        '</div><div>' +
-        escapeHtml(e.detail || '') +
-        '</div>';
-      el.appendChild(div);
+function renderFolderStatsPanel(row) {
+  var fs = document.getElementById('folderStats');
+  if (!fs) return;
+  var folderPractice = row.folderPractice || {};
+  var snap = (row.progress && row.progress.folderStats) || {};
+  var items = [];
+  Object.keys(folderPractice).forEach(function (k) {
+    var f = folderPractice[k];
+    if (f) items.push(f);
+  });
+  if (!items.length) {
+    Object.keys(snap).forEach(function (k) {
+      var s = snap[k];
+      if (!s) return;
+      items.push({
+        name: s.name || k,
+        sessions: 0,
+        questions: 0,
+        correct: 0,
+        mastered: s.mastered || 0,
+        nb: s.nb || 0,
+        wordCount: s.wordCount || 0,
+        fromSnapshot: true,
+      });
     });
+  }
+  if (!items.length) {
+    fs.innerHTML = '<p class="sub">尚無資料夾練習紀錄</p>';
+    return;
+  }
+  fs.innerHTML = '';
+  items
+    .sort(function (a, b) {
+      return (b.sessions || 0) - (a.sessions || 0);
+    })
+    .forEach(function (f) {
+      var div = document.createElement('div');
+      div.className = 'folder-row';
+      var right = f.fromSnapshot
+        ? '已背 ' +
+          (f.mastered || 0) +
+          '/' +
+          (f.wordCount || '?') +
+          ' · 錯題 ' +
+          (f.nb || 0)
+        : (f.sessions || 0) +
+          ' 次 · 答對 ' +
+          (f.correct || 0) +
+          '/' +
+          (f.questions || 0);
+      div.innerHTML =
+        '<span>📁 ' + escapeHtml(f.name || '資料夾') + '</span><span>' + right + '</span>';
+      fs.appendChild(div);
+    });
+}
+
+function renderEventList(eventsRaw) {
+  var el = document.getElementById('eventList');
+  if (!el) return;
+  eventsRaw = eventsRaw || {};
+  var events = Object.keys(eventsRaw)
+    .map(function (k) {
+      var e = eventsRaw[k];
+      e._id = k;
+      return e;
+    })
+    .sort(function (a, b) {
+      return (b.ts || 0) - (a.ts || 0);
+    })
+    .slice(0, 80);
+  if (events.length === 0) {
+    el.innerHTML =
+      '<p class="sub">尚無活動紀錄（若學生有練習卻空白，請確認已上傳新版 index.html + student-sync.js）</p>';
+    return;
+  }
+  el.innerHTML = '';
+  events.forEach(function (e) {
+    var div = document.createElement('div');
+    div.className = 'event';
+    var when = (e.date || '') + ' ' + (e.time || '');
+    if (e.ts) when = new Date(e.ts).toLocaleString('zh-TW');
+    div.innerHTML =
+      '<div class="t">' +
+      escapeHtml(when) +
+      '</div><div class="a">' +
+      escapeHtml(actionLabel(e.action)) +
+      '</div><div>' +
+      escapeHtml(e.detail || '') +
+      '</div>';
+    el.appendChild(div);
   });
 }
 

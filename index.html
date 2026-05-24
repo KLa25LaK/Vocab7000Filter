@@ -1507,6 +1507,13 @@ function fbRestPut(path,data){
     body:JSON.stringify(data)
   }).then(function(r){return r.json();});
 }
+function fbRestPatch(path,data){
+  return fetch(FB_URL+'/'+path+'.json',{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(data)
+  }).then(function(r){return r.json();});
+}
 
 function fbRestPost(path,data){
   return fetch(FB_URL+'/'+path+'.json',{

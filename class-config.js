@@ -18,6 +18,8 @@ var CLASS_CONFIG = {
   ],
   SEAT_MIN: 1,
   SEAT_MAX: 25,
+  /** 各 Level 字數（教師端還原成就用） */
+  LEVEL_WORD_COUNTS: { 1: 1084, 2: 1053, 3: 1053, 4: 1056, 5: 1187, 6: 1292 },
 };
 
 function cfgGradeLabel(gradeId) {
