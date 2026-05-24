@@ -782,7 +782,7 @@ body.scan-active .global-nav{display:none;}
            box-shadow:0 4px 16px rgba(255,107,107,.25);">
     📖 練錯題
   </button>
-  <button id="folderViewPracticeBtn" onclick="startFolderDrillFromView()"
+  <button id="folderViewPracticeBtn" type="button"
     style="position:fixed;bottom:76px;right:16px;z-index:50;display:none;
            background:var(--accent);color:#fff;border:none;border-radius:99px;
            padding:14px 20px;font-size:.95rem;font-weight:700;cursor:pointer;
@@ -2481,7 +2481,7 @@ function showDrillResult(){
       },500);
     });
   }
-  if(remainNB>0) addBtn(btns,'💪 繼續練錯題本','btn-secondary',function(){startNBDrill();});
+  if(remainNB>0) addBtn(btns,'📖 看錯題列表','btn-secondary',showNotebookFromDrillResult);
   addBtn(btns,'📖 看錯題本','btn-secondary',showNotebookFromDrillResult);
   addBtn(btns,'🏠 回首頁','btn-secondary',gotoHome);
   showScreen('drillResult');updateLevelBadges();
@@ -3485,7 +3485,10 @@ function showFolderDrillResult(){
     refreshExamUI();
     var nbLeft=getFolderNBCount(activeFolderId);
     if(nbLeft>0){
-      addBtn(btns,'📖 繼續練錯題','btn-warn',function(){startFolderWrongDrill(activeFolderId);});
+      addBtn(btns,'📖 看錯題列表','btn-warn',function(){
+        if(activeFolderId==='exam_merged'){nbActiveLevel='exam';buildNotebook('exam');showScreen('notebook');}
+        else openFolderWrongView(activeFolderId);
+      });
     }
     addBtn(btns,'🔄 繼續練未背','btn-primary',function(){
       startFolderDrill(activeFolderId);
