@@ -37,13 +37,49 @@ tr.selected td{background:rgba(108,99,255,.15)}
 .rename-box{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
 .rename-box input{width:100%;max-width:280px;}
 code{font-size:.78rem;color:var(--know)}
+.top-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.back-home{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:9px 14px;font-size:.85rem;font-weight:600;text-decoration:none;}
+.back-home:hover{color:var(--accent);border-color:var(--accent);}
+.ach-block{margin-top:16px;padding-top:16px;border-top:1px solid var(--border);}
+.ach-block h4{font-size:.95rem;margin-bottom:10px;}
+.ach-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;margin-bottom:12px;}
+.ach-summary-2{margin-top:-4px;margin-bottom:12px;}
+.ach-card{background:var(--surface2);border-radius:12px;padding:12px 8px;text-align:center;border:1px solid var(--border);}
+.ach-card .ach-num{font-size:1.35rem;font-weight:800;color:#ffd700;}
+.ach-card .ach-num.know{color:var(--know);}
+.ach-card .ach-num.warn{color:var(--warn);}
+.ach-card .ach-lbl{font-size:.68rem;color:var(--text2);margin-top:2px;}
+.ach-lv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;margin-bottom:12px;}
+.ach-lv-box{background:var(--surface2);border-radius:10px;padding:8px 6px;border:1px solid var(--border);min-width:0;}
+.ach-lv-name{font-size:.75rem;font-weight:700;margin-bottom:3px;}
+.ach-lv-stats{font-size:.62rem;color:var(--text2);line-height:1.35;margin-bottom:5px;}
+.ach-lv-stats em{font-style:normal;color:var(--know);font-weight:700;}
+.ach-lv-stats .nb{color:var(--warn);font-weight:600;}
+.ach-lv-track{width:100%;background:var(--border);border-radius:99px;height:5px;overflow:hidden;}
+.ach-lv-fill{height:100%;border-radius:99px;background:var(--know);}
+.ach-panel{background:var(--surface2);border-radius:12px;padding:12px;border:1px solid var(--border);margin-bottom:12px;font-size:.8rem;}
+.ach-mini-row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.ach-mini-row:last-child{border-bottom:none;}
+.ach-session-main{font-size:.88rem;font-weight:600;margin-bottom:4px;}
+.ach-session-sub{font-size:.76rem;color:var(--text2);line-height:1.45;}
+.ach-log-row{background:var(--surface2);border-radius:10px;padding:10px;border:1px solid var(--border);margin-bottom:6px;font-size:.78rem;}
+.ach-log-row .t{color:var(--text2);font-size:.72rem;margin-bottom:3px;}
+.ach-log-row .d{font-weight:600;}
+.ach-log-row .s{color:var(--know);font-size:.72rem;margin-top:3px;}
+.ach-stale{font-size:.78rem;color:var(--warn);padding:10px;background:#2a1a10;border-radius:8px;border:1px solid var(--warn);}
+@media(max-width:520px){.ach-summary,.ach-lv-grid{grid-template-columns:repeat(2,1fr);}}
 </style>
 <script src="class-config.js"></script>
 </head>
 <body>
 <div class="wrap">
-  <h1>📊 教師後台 · 班級進度</h1>
-  <p class="sub">免費 Firebase 同步。帳號 <code>teacher3388</code>（密碼請勿分享給學生）。</p>
+  <div class="top-actions">
+    <div>
+      <h1>📊 教師後台 · 班級進度</h1>
+      <p class="sub" style="margin-bottom:0">免費 Firebase 同步。帳號 <code>teacher3388</code>（密碼請勿分享給學生）。</p>
+    </div>
+    <a href="index.html" class="back-home">← 返回學生首頁</a>
+  </div>
 
   <div class="card" id="loginBox">
     <p style="margin-bottom:8px;font-size:.9rem;">教師登入</p>
@@ -85,6 +121,11 @@ code{font-size:.78rem;color:var(--know)}
           <input id="renameInput" placeholder="新顯示名稱">
           <button type="button" onclick="saveRename()">儲存名稱</button>
           <button type="button" class="secondary" onclick="clearRename()">恢復原暱稱</button>
+        </div>
+
+        <div class="ach-block">
+          <h4>🏆 學習成就（與學生端相同）</h4>
+          <div id="studentAchievement"></div>
         </div>
 
         <h4 style="margin:16px 0 8px;font-size:.9rem">📁 各資料夾練習次數</h4>
@@ -262,8 +303,151 @@ function selectStudent(row) {
   document.getElementById('detailSub').textContent =
     (pr.classLabel || '') + ' · 原暱稱：' + (pr.nickname || '—');
   document.getElementById('renameInput').value = pr.nameOverride || '';
+  renderStudentAchievement(row.progress || {});
   renderRoster();
   loadStudentDetail(row);
+}
+
+function renderStudentAchievement(pg) {
+  var el = document.getElementById('studentAchievement');
+  if (!el) return;
+  var ach = pg.achievement;
+  var mastered = pg.masteredTotal || 0;
+  var nb = pg.nbTotal || 0;
+  if (!ach) {
+    el.innerHTML =
+      '<div class="ach-stale">此學生尚無完整成就資料（請學生重新開啟首頁並練習一下，約數秒後按「重新整理」）。</div>' +
+      '<div class="ach-summary" style="margin-top:10px">' +
+      '<div class="ach-card"><div class="ach-num">' +
+      mastered +
+      '</div><div class="ach-lbl">已掌握</div></div>' +
+      '<div class="ach-card"><div class="ach-num warn">' +
+      nb +
+      '</div><div class="ach-lbl">錯題</div></div>' +
+      '</div>';
+    return;
+  }
+  var html =
+    '<div class="ach-summary">' +
+    '<div class="ach-card"><div class="ach-num">' +
+    mastered +
+    '</div><div class="ach-lbl">目前掌握字數</div></div>' +
+    '<div class="ach-card"><div class="ach-num warn">' +
+    nb +
+    '</div><div class="ach-lbl">錯題待加強</div></div>' +
+    '<div class="ach-card"><div class="ach-num know">+' +
+    (ach.todayMastered || 0) +
+    '</div><div class="ach-lbl">今日新掌握</div></div>' +
+    '</div>' +
+    '<div class="ach-summary ach-summary-2">' +
+    '<div class="ach-card"><div class="ach-num know">' +
+    (ach.weekMastered || 0) +
+    '</div><div class="ach-lbl">本週新掌握</div></div>' +
+    '<div class="ach-card"><div class="ach-num">' +
+    (ach.batchTotal || 0) +
+    '</div><div class="ach-lbl">累積待考字數</div></div>' +
+    '<div class="ach-card"><div class="ach-num">' +
+    (ach.streak || 0) +
+    '</div><div class="ach-lbl">連續學習天數</div></div>' +
+    '</div>';
+  if (ach.levels && ach.levels.length) {
+    html += '<p class="sub" style="margin:0 0 6px">📊 各級進度（掌握／剩餘／錯題）</p><div class="ach-lv-grid">';
+    ach.levels.forEach(function (s) {
+      var nbLine =
+        s.nb > 0
+          ? '<div class="ach-lv-stats"><span class="nb">錯題 ' + s.nb + '</span></div>'
+          : '';
+      html +=
+        '<div class="ach-lv-box">' +
+        '<div class="ach-lv-name">Level ' +
+        s.lv +
+        '</div>' +
+        '<div class="ach-lv-stats"><em>' +
+        s.mastered +
+        '</em>/' +
+        s.tot +
+        ' 掌握 · 剩 ' +
+        s.rem +
+        '</div>' +
+        nbLine +
+        '<div class="ach-lv-track"><div class="ach-lv-fill" style="width:' +
+        (s.pct || 0) +
+        '%"></div></div></div>';
+    });
+    html += '</div>';
+  }
+  html += '<p class="sub" style="margin:0 0 6px">📤 待考字彙</p><div class="ach-panel">';
+  if (!ach.batchDays || !ach.batchDays.length) {
+    html += '<div class="ach-session-sub">尚無待考紀錄</div>';
+  } else {
+    html +=
+      '<div class="ach-session-sub" style="margin-bottom:8px">共 <strong style="color:var(--know)">' +
+      (ach.batchTotal || 0) +
+      '</strong> 字</div>';
+    ach.batchDays.forEach(function (b) {
+      html +=
+        '<div class="ach-mini-row"><span>' +
+        escapeHtml(b.day) +
+        '</span><span style="color:var(--know);font-weight:700">' +
+        b.count +
+        ' 字</span></div>';
+    });
+  }
+  html += '</div>';
+  html += '<p class="sub" style="margin:0 0 6px">🕐 最近一次練習</p><div class="ach-panel">';
+  if (!ach.lastSession) {
+    html += '<div class="ach-session-sub">還沒有練習紀錄</div>';
+  } else {
+    var last = ach.lastSession;
+    var sub =
+      last.total > 0
+        ? '答對 ' +
+          last.score +
+          '／' +
+          last.total +
+          ' 字' +
+          (last.pct ? '（約 ' + last.pct + '%）' : '')
+        : '答對 ' + (last.score || 0) + ' 字';
+    html +=
+      '<div class="ach-session-main">' +
+      escapeHtml(last.label) +
+      ' · ' +
+      escapeHtml(last.date) +
+      ' ' +
+      escapeHtml(last.time) +
+      '</div>' +
+      '<div class="ach-session-sub">' +
+      escapeHtml(last.detail) +
+      '</div>' +
+      '<div class="ach-session-sub" style="margin-top:6px;color:var(--know)">' +
+      escapeHtml(sub) +
+      '</div>';
+  }
+  html += '</div>';
+  if (ach.recentLogs && ach.recentLogs.length) {
+    html += '<p class="sub" style="margin:0 0 6px">📅 學習日誌（最近 ' + ach.recentLogs.length + ' 筆）</p>';
+    ach.recentLogs.forEach(function (e) {
+      var typeMap = {
+        scan: '快篩',
+        review: '複習',
+        drill: '錯題',
+        folder: '資料夾',
+      };
+      html +=
+        '<div class="ach-log-row"><div class="t">' +
+        escapeHtml(e.date) +
+        ' ' +
+        escapeHtml(e.time) +
+        ' · ' +
+        escapeHtml(typeMap[e.type] || '其他') +
+        '</div><div class="d">' +
+        escapeHtml(e.detail) +
+        '</div><div class="s">答對 ' +
+        (e.score || 0) +
+        ' 字</div></div>';
+    });
+  }
+  el.innerHTML = html;
 }
 
 function loadStudentDetail(row) {

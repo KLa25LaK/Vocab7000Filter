@@ -158,11 +158,69 @@ function collectFolderStatsSnapshot() {
   return out;
 }
 
+function collectAchievementSnapshot() {
+  var levels = [];
+  if (typeof ALL_LEVELS !== 'undefined' && typeof getLevelStat === 'function') {
+    ALL_LEVELS.forEach(function (lv) {
+      var s = getLevelStat(lv);
+      levels.push({
+        lv: s.lv,
+        tot: s.tot,
+        mastered: s.mastered,
+        rem: s.rem,
+        nb: s.nb,
+        pct: s.pct,
+      });
+    });
+  }
+  var batchDays = [];
+  if (typeof getBatchData === 'function' && typeof getBatchDays === 'function') {
+    var d = getBatchData();
+    getBatchDays().forEach(function (day) {
+      batchDays.push({
+        day: day,
+        count: d.days[day] ? d.days[day].length : 0,
+      });
+    });
+  }
+  var recentLogs = [];
+  if (typeof getMergedActivityLogs === 'function') {
+    getMergedActivityLogs()
+      .slice(0, 25)
+      .forEach(function (e) {
+        recentLogs.push({
+          type: e.type,
+          detail: e.detail,
+          score: e.score || 0,
+          date: e.date,
+          time: e.time,
+        });
+      });
+  }
+  var last =
+    typeof getLastSessionInfo === 'function' ? getLastSessionInfo() : null;
+  return {
+    todayMastered:
+      typeof getTodayMasteredCount === 'function' ? getTodayMasteredCount() : 0,
+    weekMastered:
+      typeof getWeekMasteredCount === 'function' ? getWeekMasteredCount() : 0,
+    batchTotal:
+      typeof getTotalBatchCount === 'function' ? getTotalBatchCount() : 0,
+    streak: typeof getStudyStreak === 'function' ? getStudyStreak() : 0,
+    levels: levels,
+    batchDays: batchDays,
+    lastSession: last,
+    recentLogs: recentLogs,
+  };
+}
+
 function collectProgressSummary() {
   var byLevel = {};
+  var nbByLevel = {};
   if (typeof ALL_LEVELS !== 'undefined') {
     ALL_LEVELS.forEach(function (lv) {
       byLevel['lv' + lv] = getMastered(lv).length;
+      nbByLevel['lv' + lv] = getNB(lv).length;
     });
   }
   var nbTotal =
@@ -178,7 +236,9 @@ function collectProgressSummary() {
       return s + (x.mastered || 0);
     }, 0),
     byLevel: byLevel,
+    nbByLevel: nbByLevel,
     folderStats: collectFolderStatsSnapshot(),
+    achievement: collectAchievementSnapshot(),
     updatedAt: Date.now(),
     date: typeof getTodayStr === 'function' ? getTodayStr() : '',
   };

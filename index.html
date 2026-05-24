@@ -56,35 +56,38 @@ h1 span{color:var(--accent)}
 .lv-progress-wrap{width:100%;background:var(--border);border-radius:99px;height:5px;margin-top:5px;overflow:hidden;}
 .lv-progress-fill{height:100%;border-radius:99px;background:var(--know);transition:width .5s}
 .start-row{width:100%;display:flex;align-items:stretch;gap:8px;margin:4px 0 8px;}
-.start-btn{flex:1;min-width:0;background:var(--accent);color:#fff;border:none;border-radius:14px;padding:16px 12px;font-size:1.1rem;font-weight:700;cursor:pointer;margin:0}
+.start-btn{flex:1;min-width:0;background:var(--accent);color:#fff;border:none;border-radius:14px;padding:18px 14px;font-size:clamp(1.2rem,5vw,1.45rem);font-weight:800;line-height:1.2;letter-spacing:.02em;cursor:pointer;margin:0;min-height:56px;}
 .start-btn:disabled{opacity:.4;cursor:default}
 .start-btn:not(:disabled):hover{opacity:.88}
 
 /* ── REVIEW TEST SECTION ── */
 .section-block{width:100%;margin-top:18px;border-top:1px solid var(--border);padding-top:14px;}
-.section-block-title{font-size:.72rem;color:var(--text2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+.section-block-title{font-size:clamp(1.02rem,3.8vw,1.2rem);color:var(--text);margin-bottom:8px;font-weight:700;letter-spacing:.01em;}
 .review-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;width:100%;}
-.review-level-select{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:9px 12px;font-size:.85rem;cursor:pointer;margin-bottom:8px;}
+.review-level-select{width:100%;background:var(--surface);border:2px solid var(--border);color:var(--text);border-radius:12px;padding:14px 14px;font-size:clamp(1.02rem,4vw,1.14rem);font-weight:600;line-height:1.3;cursor:pointer;margin-bottom:10px;min-height:50px;-webkit-appearance:none;appearance:none;}
+.review-level-select option{font-size:1.1rem;padding:10px;}
 .review-level-select:hover{border-color:var(--accent)}
-.review-count-btn{background:var(--surface);border:2px solid var(--border);color:var(--text2);border-radius:10px;padding:10px 4px;font-size:.88rem;font-weight:600;cursor:pointer;text-align:center;}
-.review-count-btn:hover{border-color:var(--accent);color:var(--text)}
+.review-count-btn{background:var(--surface);border:2px solid var(--border);color:var(--text);border-radius:12px;padding:14px 8px;font-size:clamp(1.1rem,4.5vw,1.28rem);font-weight:800;line-height:1.25;cursor:pointer;text-align:center;min-height:52px;}
+.review-count-btn:hover{border-color:var(--accent);color:var(--accent);}
 .review-count-btn.selected{border-color:var(--accent);color:var(--accent);background:#1e1f3a}
-.review-start-btn{width:100%;background:#1a2a1a;color:var(--know);border:2px solid var(--know);border-radius:12px;padding:13px;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:4px;}
+.review-pick-label{font-size:clamp(.95rem,3.5vw,1.08rem);color:var(--text2);margin-bottom:8px;font-weight:600;}
+.review-start-btn{width:100%;background:#1a2a1a;color:var(--know);border:2px solid var(--know);border-radius:12px;padding:14px;font-size:clamp(1rem,4vw,1.12rem);font-weight:700;cursor:pointer;margin-top:4px;}
 .review-start-btn:hover{opacity:.85}
 .review-start-btn:disabled{opacity:.4;cursor:default}
 
 /* ── RESET SECTION ── */
 .reset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;margin-bottom:6px;}
-.reset-btn{background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:8px 4px;font-size:.75rem;cursor:pointer;text-align:center;}
+.reset-btn{background:var(--surface);border:2px solid var(--border);color:var(--text);border-radius:12px;padding:14px 6px;font-size:clamp(1.05rem,4.2vw,1.22rem);font-weight:800;line-height:1.25;cursor:pointer;text-align:center;min-height:52px;}
 .reset-btn:hover{border-color:var(--warn);color:var(--warn);}
-.reset-btn-all{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:9px;font-size:.8rem;cursor:pointer;text-align:center;}
+.reset-btn-all{width:100%;background:var(--surface);border:2px solid var(--border);color:var(--text2);border-radius:12px;padding:14px;font-size:clamp(1rem,4vw,1.12rem);font-weight:700;cursor:pointer;text-align:center;margin-top:6px;}
 .reset-btn-all:hover{border-color:var(--warn);color:var(--warn);}
 
 /* ── 情境提示（取代長篇使用說明）── */
-.ctx-hint{font-size:.74rem;color:var(--text2);line-height:1.45;margin:0 0 8px;}
+.ctx-hint{font-size:clamp(.95rem,3.4vw,1.06rem);color:var(--text2);line-height:1.5;margin:0 0 10px;}
+.section-block .ctx-hint{font-size:clamp(.95rem,3.4vw,1.06rem);}
 .ctx-hint strong{color:var(--accent);font-weight:600;}
 .start-row .hint-trigger-wrap{position:relative;flex-shrink:0;margin:0;width:auto;}
-.hint-trigger-btn{height:100%;background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:14px;padding:0 12px;font-size:.74rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+.hint-trigger-btn{height:100%;min-height:56px;background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:14px;padding:0 14px;font-size:clamp(.9rem,3.5vw,1.02rem);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
 .hint-trigger-btn:hover,.hint-trigger-btn.open{border-color:var(--accent);color:var(--accent);}
 .hint-popover-backdrop{display:none;position:fixed;inset:0;z-index:150;background:transparent;}
 .start-row .hint-popover{display:none;position:absolute;top:calc(100% + 6px);right:0;left:auto;z-index:151;width:min(300px,calc(100vw - 32px));background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:.78rem;color:var(--text2);line-height:1.55;box-shadow:0 10px 28px rgba(0,0,0,.5);text-align:left;}
@@ -113,12 +116,12 @@ h1 span{color:var(--accent)}
 .speak-btn:hover{color:var(--accent)}
 .quiz-view{display:none;padding:24px 22px 22px;flex-direction:column;align-items:center}
 .quiz-view.show{display:flex}
-.quiz-label{font-size:.82rem;color:var(--text2);margin-bottom:6px}
+.quiz-label{font-size:clamp(.95rem,3.5vw,1.08rem);color:var(--text2);margin-bottom:8px;font-weight:600;}
 .quiz-word{font-size:1.7rem;font-weight:800;margin-bottom:12px}
 .quiz-timer-wrap{width:100%;background:var(--border);border-radius:99px;height:5px;margin-bottom:16px;overflow:hidden}
 .quiz-timer-bar{height:100%;border-radius:99px;background:var(--accent);transition:width .1s linear}
 .quiz-options{width:100%;display:flex;flex-direction:column;gap:5px}
-.quiz-opt{background:var(--surface2);border:2px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:clamp(1rem,3.2vw,1.18rem);cursor:pointer;text-align:left;width:100%;font-weight:500;line-height:1.25;min-height:48px;word-break:break-word;}
+.quiz-opt{background:var(--surface2);border:2px solid var(--border);color:var(--text);border-radius:12px;padding:14px 16px;font-size:clamp(1.08rem,4.5vw,1.32rem);cursor:pointer;text-align:left;width:100%;font-weight:700;line-height:1.3;min-height:52px;word-break:break-word;}
 .quiz-opt:hover:not(:disabled){border-color:var(--accent);background:#1e1f3a}
 .quiz-opt.correct{border-color:var(--know);background:#0d2a21;color:var(--know);font-weight:700}
 .quiz-opt.wrong{border-color:var(--unknown);background:#2a0d0d;color:var(--unknown)}
@@ -126,7 +129,7 @@ h1 span{color:var(--accent)}
 
 /* ── ACTION BUTTONS ── */
 .action-row{display:flex;gap:12px;width:100%;margin-bottom:4px}
-.action-btn{flex:1;border:none;border-radius:14px;padding:14px 8px;font-size:var(--fs-md);font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;}
+.action-btn{flex:1;border:none;border-radius:14px;padding:14px 10px;font-size:clamp(1.05rem,4.5vw,1.28rem);font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;line-height:1.25;}
 .action-btn .kb{font-size:.65rem;opacity:.55;font-weight:400}
 .action-btn.know-btn{background:#0d2a21;color:var(--know);border:2px solid var(--know)}
 .action-btn.unknown-btn{background:#2a0d0d;color:var(--unknown);border:2px solid var(--unknown)}
@@ -202,7 +205,7 @@ h1 span{color:var(--accent)}
 .drill-en.is-zh{font-size:clamp(1.25rem,4.5vw,1.65rem);}
 .drill-pos{font-size:.82rem;color:var(--text2);margin-bottom:12px;font-style:italic}
 .drill-options{display:flex;flex-direction:column;gap:5px;width:100%;margin-bottom:8px}
-.drill-opt{background:var(--surface);border:2px solid var(--border);color:var(--text);border-radius:12px;padding:10px 16px;font-size:1.4rem;cursor:pointer;text-align:left;font-weight:500;}
+.drill-opt{background:var(--surface);border:2px solid var(--border);color:var(--text);border-radius:12px;padding:14px 16px;font-size:clamp(1.08rem,4.5vw,1.32rem);cursor:pointer;text-align:left;font-weight:700;line-height:1.3;min-height:52px;width:100%;}
 .drill-opt:hover:not(:disabled){border-color:var(--accent);background:#1e1f3a}
 .drill-opt.correct{border-color:var(--know);background:#0d2a21;color:var(--know);font-weight:700}
 .drill-opt.wrong{border-color:var(--unknown);background:#2a0d0d;color:var(--unknown)}
@@ -303,7 +306,7 @@ h1 span{color:var(--accent)}
 /* ══ 可讀但不擋版：字級 + 版面安全區 ══ */
 .gnav-btn{font-size:var(--fs-xs);padding:10px 6px calc(6px + env(safe-area-inset-bottom,0px));}
 .gnav-btn .icon{font-size:1.35rem;}
-.ctx-hint,.section-block-title,.hint,.nb-count,.stat-chip .lbl,.quiz-label,.scan-hint{font-size:var(--fs-sm);}
+.hint,.nb-count,.stat-chip .lbl,.quiz-label,.scan-hint{font-size:var(--fs-sm);}
 .nb-tab{font-size:var(--fs-sm);padding:9px 12px;min-height:42px;line-height:1.2;}
 .nb-tab .tc{font-size:var(--fs-xs);}
 h1{font-size:var(--fs-display);}
@@ -311,12 +314,20 @@ h1{font-size:var(--fs-display);}
 .nb-header h2,.drill-header h2,.ach-header h2{font-size:var(--fs-xl);}
 .word-row-en{font-size:var(--fs-lg);}
 .word-row-zh{font-size:var(--fs-md);}
-.level-btn{font-size:var(--fs-md);}
-.level-btn .cnt{font-size:var(--fs-xs);}
-.level-btn .cnt .cnt-mastered{font-size:var(--fs-sm);}
-.exam-grid-line{font-size:var(--fs-sm);}
-.exam-grid-line.sub{font-size:var(--fs-xs);}
-.drill-opt{font-size:clamp(1rem,3.2vw,1.18rem);padding:11px 14px;min-height:48px;line-height:1.25;}
+.level-btn{font-size:clamp(1.05rem,4vw,1.28rem);font-weight:800;line-height:1.28;}
+.level-btn .cnt{font-size:clamp(.98rem,3.6vw,1.1rem);font-weight:500;line-height:1.38;}
+.level-btn .cnt .cnt-mastered{font-size:clamp(1.05rem,3.8vw,1.22rem);font-weight:800;}
+.level-btn .cnt .cnt-left{font-size:clamp(.95rem,3.4vw,1.06rem);}
+.exam-grid-line{font-size:clamp(1.02rem,3.8vw,1.16rem);}
+.exam-grid-line.sub{font-size:clamp(.92rem,3.2vw,1.04rem);}
+.section-block-title{font-size:clamp(1.02rem,3.8vw,1.2rem);color:var(--text);}
+.section-block .ctx-hint{font-size:clamp(.95rem,3.4vw,1.06rem);}
+.review-level-select{font-size:clamp(1.02rem,4vw,1.14rem);font-weight:600;}
+.quiz-opt,.drill-opt{font-size:clamp(1.08rem,4.5vw,1.32rem);font-weight:700;min-height:52px;padding:14px 16px;}
+.action-btn{font-size:clamp(1.05rem,4.5vw,1.28rem);font-weight:800;}
+.review-count-btn,.reset-btn{font-size:clamp(1.1rem,4.5vw,1.28rem);font-weight:800;color:var(--text);}
+.review-start-btn,.reset-btn-all{font-size:clamp(1.02rem,4vw,1.14rem);}
+.start-btn{font-size:clamp(1.2rem,5vw,1.45rem);font-weight:800;}
 .drill-en{font-size:clamp(1.5rem,5.5vw,2rem);}
 .global-nav{padding-bottom:env(safe-area-inset-bottom,0px);}
 
@@ -366,7 +377,7 @@ body.scan-active .global-nav{display:none;}
 }
 @media (max-width:380px){
   .scan-top .word-en{font-size:clamp(1.35rem,5vw,1.75rem);}
-  .quiz-opt{font-size:1rem;padding:10px 12px;}
+  .quiz-opt,.drill-opt{font-size:clamp(1.05rem,4.8vw,1.28rem);padding:13px 14px;}
 }
 /* ── 學生身分 / 登入 ── */
 .student-gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:350;padding:20px;}
@@ -387,19 +398,8 @@ body.scan-active .global-nav{display:none;}
 .home-header-meta .top-student{display:flex;flex-direction:column;align-items:flex-end;gap:3px;max-width:100%;word-break:break-word;}
 .home-header-meta .student-class-line{display:block;font-size:clamp(.78rem,2.6vw,.88rem);color:var(--text2);line-height:1.35;}
 .home-header-meta .student-name-line{display:block;font-size:clamp(.9rem,3.2vw,1.02rem);color:var(--text);font-weight:700;line-height:1.3;}
-.teacher-portal-tab{
-  position:fixed;right:0;top:42%;transform:translateY(-50%);z-index:90;
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:10px 6px 10px 10px;border-radius:10px 0 0 10px;
-  background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%);
-  border:1px solid var(--border);border-right:none;
-  box-shadow:-4px 2px 18px rgba(0,0,0,.45);
-  font-size:.72rem;font-weight:700;letter-spacing:.12em;color:var(--text2);
-  text-decoration:none;writing-mode:vertical-rl;text-orientation:upright;
-  transition:color .2s,box-shadow .2s,transform .2s;
-}
-.teacher-portal-tab:hover{color:var(--accent);box-shadow:-6px 2px 22px rgba(108,99,255,.25);transform:translateY(-50%) translateX(-2px);}
-#home:not(.active) .teacher-portal-tab{display:none;}
+.gnav-btn.gnav-teacher-link{text-decoration:none;color:var(--text2);}
+.gnav-btn.gnav-teacher-link:hover{color:var(--text);}
 .boot-error{display:none;width:100%;max-width:min(640px,100%);margin:0 auto 12px;padding:12px 14px;border-radius:12px;background:#2a1515;border:1px solid var(--unknown);color:#ffb4b4;font-size:.85rem;line-height:1.5;}
 .boot-error strong{color:#fff;}
 </style>
@@ -459,14 +459,13 @@ body.scan-active .global-nav{display:none;}
 <!-- NAV -->
 <nav class="global-nav">
   <button class="gnav-btn active" id="gnavHome" onclick="gotoHome()"><span class="icon">🏠</span><span>首頁</span></button>
-  <button class="gnav-btn" id="gnavExam" onclick="gotoExamNav()"><span class="icon">📁</span><span>段考</span></button>
   <button class="gnav-btn" id="gnavNB" onclick="gotoNotebook()"><span class="icon">📖</span><span>錯題本</span></button>
   <button class="gnav-btn" id="gnavAch" onclick="gotoAchievement()"><span class="icon">🏆</span><span>成就</span></button>
+  <a href="teacher.html" class="gnav-btn gnav-teacher-link" id="gnavTeacher" title="教師後台"><span class="icon">👩‍🏫</span><span>教師登入</span></a>
 </nav>
 
 <!-- ══ HOME ══ -->
 <div id="home" class="screen active">
-  <a href="teacher.html" class="teacher-portal-tab" title="教師後台">教師登入</a>
   <header class="home-header" id="appTopBar">
     <div class="home-header-brand">
       <h1>高中<span>7000單</span></h1>
@@ -507,7 +506,7 @@ body.scan-active .global-nav{display:none;}
       <option value="5">Level 5</option>
       <option value="6">Level 6</option>
     </select>
-    <div style="font-size:.78rem;color:var(--text2);margin-bottom:8px;">選擇題數：</div>
+    <div class="review-pick-label">選擇題數：</div>
     <div class="review-grid">
       <button class="review-count-btn" onclick="selectReviewCount(50,this)">50 字</button>
       <button class="review-count-btn" onclick="selectReviewCount(100,this)">100 字</button>
@@ -2129,8 +2128,8 @@ function showScreen(id){
   var map={home:'gnavHome',scan:'gnavHome',result:'gnavHome',
            notebook:'gnavNB',drill:'gnavNB',drillResult:'gnavNB',
            reviewTest:'gnavHome',achievement:'gnavAch',
-           examFolders:'gnavExam',
-           folderView:'gnavExam',folderSearch:'gnavExam',folderDrill:'gnavExam',folderDrillResult:'gnavExam'};
+           examFolders:'gnavHome',
+           folderView:'gnavHome',folderSearch:'gnavHome',folderDrill:'gnavHome',folderDrillResult:'gnavHome'};
   if(map[id])document.getElementById(map[id]).classList.add('active');
 }
 var scanInProgress=false;
@@ -2721,6 +2720,7 @@ function buildAchievement(){
       '<span class="ach-log-badge '+t.cls+'">'+t.label+'</span>';
     ll.appendChild(row);
   });
+  if(typeof scheduleProgressSync==='function')scheduleProgressSync();
 }
 
 /* ═══════ RESET ═══════ */
