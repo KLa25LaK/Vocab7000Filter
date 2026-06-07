@@ -8,6 +8,8 @@
   'use strict';
 
   var RICH_INDEX_FILE = 'vocab-rich-index.json';
+  var ADDITIONAL_INDEX_FILE = 'vocab-additional-index.json';
+  var ADDITIONAL_FULL_FILE = 'vocab_7000-additional.json';
   var LEVEL_JSON = {
     1: 'vocab_7000-level01.json',
     2: 'vocab_7000-level02.json',
@@ -48,7 +50,30 @@
   var levelLoaded = {};
   var levelLoading = {};
   var enLookup = {};
+  var additionalLookup = {};
+  var additionalLoaded = false;
+  var additionalLoading = null;
   var audioEl = null;
+
+  var POS_ZH = {
+    noun: 'n. 名詞',
+    verb: 'v. 動詞',
+    adjective: 'adj. 形容詞',
+    adverb: 'adv. 副詞',
+    preposition: 'prep. 介系詞',
+    conjunction: 'conj. 連接詞',
+    pronoun: 'pron. 代名詞',
+    interjection: 'int. 感嘆詞',
+    determiner: 'det. 限定詞',
+    phrase: 'phr. 片語',
+    n: 'n. 名詞',
+    v: 'v. 動詞',
+    adj: 'adj. 形容詞',
+    adv: 'adv. 副詞',
+    prep: 'prep. 介系詞',
+    conj: 'conj. 連接詞',
+    pron: 'pron. 代名詞'
+  };
   var origSpeakText = null;
   var patched = false;
   var _vfPendingContinue = null;
@@ -105,7 +130,18 @@
       '.word-card-ipa{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}',
       '.word-card-ipa-item{flex:1;min-width:140px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:.8rem;line-height:1.4;}',
       '.word-card-ipa-item strong{display:block;font-size:.7rem;color:var(--accent);margin-bottom:3px;}',
-      '.word-card-coll-list{margin:0;padding-left:1.1em;font-size:.86rem;line-height:1.55;color:var(--text);}',
+      '.word-card-coll-list{margin:0;padding:0;list-style:none;}',
+      '.word-card-coll-item{padding:8px 0;border-bottom:1px solid var(--border);}',
+      '.word-card-coll-item:last-child{border-bottom:none;padding-bottom:0;}',
+      '.word-card-coll-en{font-size:.86rem;color:var(--text);font-weight:600;line-height:1.4;}',
+      '.word-card-coll-zh{font-size:.8rem;color:var(--text2);margin-top:3px;line-height:1.45;}',
+      '.word-card-ex-block{margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid var(--border);}',
+      '.word-card-ex-block:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}',
+      '.word-card-ex-pos{display:inline-block;font-size:.7rem;font-weight:700;color:var(--accent);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;margin-bottom:6px;}',
+      '.word-card-ex-en{font-size:.86rem;color:var(--text);line-height:1.55;}',
+      '.word-card-ex-zh{font-size:.82rem;color:var(--text2);margin-top:4px;line-height:1.5;}',
+      '.wc-vocab-link{color:var(--accent);text-decoration:underline;text-decoration-style:solid;text-underline-offset:2px;cursor:pointer;font-weight:600;}',
+      '.wc-vocab-link:hover{color:#fff;background:rgba(99,102,241,.25);border-radius:3px;}',
       '.word-card-empty{font-size:.82rem;color:var(--text2);font-style:italic;}'
     ].join('\n');
     document.head.appendChild(st);
@@ -135,7 +171,7 @@
         block.style.paddingTop = '0';
         block.innerHTML =
           '<div class="section-block-title">📥 考卷匯入</div>' +
-          '<p class="ctx-hint">貼上老師考卷字表（每行一字），自動對應 7000 單並建立資料夾</p>' +
+          '<p class="ctx-hint">貼上老師考卷字表（每行一字），自動對應 7000 單與補充字並建立資料夾</p>' +
           '<textarea id="examImportText" placeholder="abandon&#10;absolute&#10;academic&#10;..."></textarea>' +
           '<div class="exam-import-actions">' +
           '<button type="button" style="background:var(--accent);color:#fff;" onclick="VF_importExamText()">建立資料夾</button>' +
@@ -186,6 +222,316 @@
     global.allWords.forEach(function (w) {
       enLookup[w.en.toLowerCase()] = w;
     });
+  }
+
+  function posLabelZh(pos) {
+    if (!pos) return '';
+    var key = String(pos).toLowerCase().replace(/\./g, '');
+    if (POS_ZH[key]) return POS_ZH[key];
+    return String(pos);
+  }
+
+  function cleanToken(t) {
+    return String(t || '')
+      .toLowerCase()
+      .replace(/^[^a-z0-9'-]+|[^a-z0-9'-]+$/gi, '');
+  }
+
+  function stemVariants(w) {
+    var out = [];
+    var seen = {};
+    function push(v) {
+      if (!v || v.length < 2 || seen[v]) return;
+      seen[v] = true;
+      out.push(v);
+    }
+    push(w);
+    if (/ies$/.test(w) && w.length > 4) push(w.replace(/ies$/, 'y'));
+    if (/ing$/.test(w) && w.length > 5) {
+      push(w.replace(/ing$/, ''));
+      push(w.replace(/ing$/, 'e'));
+    }
+    if (/ed$/.test(w) && w.length > 4) {
+      push(w.replace(/ed$/, ''));
+      push(w.replace(/ed$/, 'e'));
+    }
+    if (/es$/.test(w) && w.length > 4) push(w.replace(/es$/, ''));
+    if (/s$/.test(w) && w.length > 3) push(w.replace(/s$/, ''));
+    if (/ly$/.test(w) && w.length > 4) push(w.replace(/ly$/, ''));
+    return out;
+  }
+
+  function lookupWordEntry(en) {
+    if (!en) return null;
+    var key = String(en).toLowerCase();
+    if (enLookup[key]) return enLookup[key];
+    if (additionalLookup[key]) return additionalLookup[key];
+    var rich = richByEn[key];
+    if (rich && (rich.zh || rich.pos)) {
+      return { en: rich.en || en, zh: rich.zh || '', pos: rich.pos || '', level: rich.level || 0 };
+    }
+    var variants = stemVariants(cleanToken(key));
+    for (var i = 0; i < variants.length; i++) {
+      var v = variants[i];
+      if (enLookup[v]) return enLookup[v];
+      if (additionalLookup[v]) return additionalLookup[v];
+      if (richByEn[v]) {
+        var r = richByEn[v];
+        return { en: r.en || en, zh: r.zh || '', pos: r.pos || '', level: r.level || 0 };
+      }
+    }
+    return null;
+  }
+
+  function firstZh(zh) {
+    if (!zh) return '';
+    return String(zh).split(/[；;／/|]/)[0].trim();
+  }
+
+  function glossCollocation(phrase) {
+    if (!phrase) return '';
+    var raw = String(phrase).trim();
+    var whole = lookupWordEntry(raw.toLowerCase());
+    if (whole && whole.zh) return firstZh(whole.zh);
+
+    var parts = raw.split(/\s+/);
+    var gloss = [];
+    var i = 0;
+    while (i < parts.length) {
+      var matched = false;
+      for (var len = Math.min(4, parts.length - i); len >= 1; len--) {
+        var chunk = parts.slice(i, i + len).join(' ');
+        var w = lookupWordEntry(chunk.toLowerCase());
+        if (w && w.zh) {
+          gloss.push(parts.slice(i, i + len).join(' ') + '（' + firstZh(w.zh) + '）');
+          i += len;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        var one = lookupWordEntry(parts[i]);
+        if (one && one.zh) gloss.push(parts[i] + '（' + firstZh(one.zh) + '）');
+        else gloss.push(parts[i]);
+        i++;
+      }
+    }
+    return gloss.join('＋');
+  }
+
+  function collectWordSpans(text) {
+    var words = [];
+    var re = /[A-Za-z]+(?:'[A-Za-z]+)?/g;
+    var m;
+    while ((m = re.exec(text)) !== null) {
+      words.push({ start: m.index, end: m.index + m[0].length, text: m[0] });
+    }
+    return words;
+  }
+
+  function linkifyExample(enText) {
+    if (!enText) return '';
+    var text = String(enText);
+    var words = collectWordSpans(text);
+    if (!words.length) return esc(text);
+
+    var used = {};
+    var links = [];
+    for (var i = 0; i < words.length; i++) {
+      if (used[i]) continue;
+      var best = null;
+      for (var j = Math.min(words.length, i + 4); j > i; j--) {
+        var phrase = words
+          .slice(i, j)
+          .map(function (w) {
+            return w.text;
+          })
+          .join(' ');
+        var hit = lookupWordEntry(phrase.toLowerCase());
+        if (hit && hit.zh) {
+          best = { i: i, j: j, hit: hit };
+          break;
+        }
+      }
+      if (best) {
+        for (var k = best.i; k < best.j; k++) used[k] = true;
+        links.push({
+          start: words[best.i].start,
+          end: words[best.j - 1].end,
+          text: text.slice(words[best.i].start, words[best.j - 1].end),
+          en: best.hit.en || words[best.i].text
+        });
+      }
+    }
+
+    links.sort(function (a, b) {
+      return a.start - b.start;
+    });
+    var html = '';
+    var pos = 0;
+    links.forEach(function (lk) {
+      html += esc(text.slice(pos, lk.start));
+      html +=
+        '<span class="wc-vocab-link" role="button" tabindex="0" data-en="' +
+        esc(lk.en) +
+        '" onclick="event.stopPropagation();VF_showWordCard(this.getAttribute(\'data-en\'))">' +
+        esc(lk.text) +
+        '</span>';
+      pos = lk.end;
+    });
+    html += esc(text.slice(pos));
+    return html;
+  }
+
+  function ingestAdditionalEntries(entries) {
+    (entries || []).forEach(function (e) {
+      if (!e) return;
+      var en = e.headword || e.en;
+      if (!en) return;
+      indexAdditionalWord({
+        en: en,
+        zh: (e.meanings_zh && e.meanings_zh[0]) || e.zh || '',
+        pos: e.pos_display || e.pos || '',
+        level: 0,
+        _additional: true
+      });
+    });
+  }
+
+  function loadAdditionalLookup() {
+    if (additionalLoaded) return Promise.resolve(true);
+    if (additionalLoading) return additionalLoading;
+    additionalLoading = fetch(ADDITIONAL_INDEX_FILE)
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        var words = data.words || data;
+        if (Array.isArray(words)) {
+          words.forEach(function (e) {
+            if (e && e.en) indexAdditionalWord(e);
+          });
+        } else {
+          Object.keys(words).forEach(function (k) {
+            indexAdditionalWord(words[k]);
+          });
+        }
+        additionalLoaded = true;
+        return true;
+      })
+      .catch(function () {
+        return fetch(ADDITIONAL_FULL_FILE)
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            ingestAdditionalEntries(data.entries || []);
+            additionalLoaded = true;
+            return true;
+          });
+      })
+      .catch(function () {
+        return false;
+      })
+      .finally(function () {
+        additionalLoading = null;
+      });
+    return additionalLoading;
+  }
+
+  function runFolderSearchInput() {
+    var qEl = document.getElementById('searchInput');
+    var dd = document.getElementById('searchDropdown');
+    if (!qEl || !dd) return;
+    var q = qEl.value.trim().toLowerCase();
+    dd.innerHTML = '';
+    if (!q.length) return;
+
+    var pool = getFolderSearchPool();
+    var matches = pool
+      .filter(function (w) {
+        return w.en.toLowerCase().startsWith(q);
+      })
+      .slice(0, 12);
+    var exactMatch = pool.find(function (w) {
+      return w.en.toLowerCase() === q;
+    });
+
+    matches.forEach(function (w) {
+      var item = document.createElement('div');
+      item.className = 'search-item';
+      item.style.cssText =
+        'padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;';
+      var badge = w._additional
+        ? '<span style="font-size:.65rem;color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:1px 6px;">補充字</span>'
+        : '';
+      item.innerHTML =
+        '<div style="flex:1;"><div style="font-weight:700;font-size:.9rem;">' +
+        esc(w.en) +
+        ' ' +
+        badge +
+        '</div><div style="font-size:.75rem;color:var(--text2);">' +
+        esc(w.pos) +
+        ' ' +
+        esc(w.zh) +
+        '</div></div>' +
+        '<button style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;">加入</button>';
+      item.querySelector('button').addEventListener(
+        'click',
+        (function (word) {
+          return function (e) {
+            e.stopPropagation();
+            if (typeof global.addWordToFolder === 'function' && global._searchFolderId) {
+              global.addWordToFolder(global._searchFolderId, word);
+              if (typeof global.renderFolderWordList === 'function') {
+                global.renderFolderWordList(global._searchFolderId);
+              }
+              if (typeof global.buildFolderSection === 'function') global.buildFolderSection();
+              if (typeof global.showToast === 'function') global.showToast(word.en + ' 已加入 ✅');
+            }
+          };
+        })(w)
+      );
+      dd.appendChild(item);
+    });
+
+    if (!exactMatch && q.length >= 2) {
+      var custom = document.createElement('div');
+      custom.style.cssText =
+        'padding:10px 14px;cursor:pointer;background:var(--surface2);display:flex;align-items:center;gap:10px;';
+      custom.innerHTML =
+        '<div style="flex:1;font-size:.85rem;color:var(--warn);">「' +
+        esc(q) +
+        '」不在 7000／補充字庫，自訂加入</div>' +
+        '<button style="background:var(--warn);color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;font-weight:700;">自訂</button>';
+      custom.querySelector('button').addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (typeof global.openCustomWordModal === 'function') global.openCustomWordModal(q);
+      });
+      dd.appendChild(custom);
+    }
+  }
+
+  function patchFolderSearch() {
+    if (typeof global.onSearchInput === 'function' && !global.onSearchInput._vf) {
+      global.onSearchInput = function () {
+        loadAdditionalLookup().finally(function () {
+          runFolderSearchInput();
+        });
+      };
+      global.onSearchInput._vf = true;
+    }
+    if (typeof global.openFolderSearch === 'function' && !global.openFolderSearch._vf) {
+      var origOpen = global.openFolderSearch;
+      global.openFolderSearch = function (folderId) {
+        loadAdditionalLookup().finally(function () {
+          origOpen(folderId);
+        });
+      };
+      global.openFolderSearch._vf = true;
+    }
   }
 
   function indexRichFromSlim(entry, key) {
@@ -290,8 +636,8 @@
   }
 
   function preloadRichData() {
-    return loadRichIndex().then(function (ok) {
-      if (ok) return true;
+    return Promise.all([loadRichIndex(), loadAdditionalLookup()]).then(function (res) {
+      if (res[0]) return true;
       var levels = [];
       if (global.allWords) {
         global.allWords.forEach(function (w) {
@@ -348,6 +694,7 @@
   }
 
   function ensureRichForWord(en, cb) {
+    loadAdditionalLookup();
     if (getRich(en)) {
       if (cb) cb();
       return;
@@ -425,7 +772,21 @@
           rich.collocations
             .slice(0, 8)
             .map(function (c) {
-              return '<li>' + esc(c) + '</li>';
+              var phrase = typeof c === 'string' ? c : c.en || c.phrase || '';
+              var zhHint =
+                typeof c === 'object' && c.zh
+                  ? firstZh(c.zh)
+                  : glossCollocation(phrase);
+              return (
+                '<li class="word-card-coll-item">' +
+                '<div class="word-card-coll-en">' +
+                esc(phrase) +
+                '</div>' +
+                (zhHint
+                  ? '<div class="word-card-coll-zh">→ ' + esc(zhHint) + '</div>'
+                  : '') +
+                '</li>'
+              );
             })
             .join('') +
           '</ul>';
@@ -446,12 +807,17 @@
         exBody.innerHTML = examples
           .slice(0, 3)
           .map(function (ex) {
+            var posTag = ex.pos ? '<span class="word-card-ex-pos">' + esc(posLabelZh(ex.pos)) + '</span>' : '';
             return (
-              '<p style="margin:0 0 10px;line-height:1.55;">' +
-              esc(ex.en) +
-              '<br><span style="color:var(--text2);font-size:.84rem;">' +
-              esc(ex.zh) +
-              '</span></p>'
+              '<div class="word-card-ex-block">' +
+              posTag +
+              '<div class="word-card-ex-en">' +
+              linkifyExample(ex.en) +
+              '</div>' +
+              (ex.zh
+                ? '<div class="word-card-ex-zh">' + esc(ex.zh) + '</div>'
+                : '') +
+              '</div>'
             );
           })
           .join('');
@@ -518,10 +884,45 @@
     return applyRegexVariants(t, NORMALIZE_RULES);
   }
 
+  function indexAdditionalWord(entry) {
+    if (!entry || !entry.en) return;
+    var key = entry.en.toLowerCase();
+    additionalLookup[key] = entry;
+    if (!richByEn[key]) {
+      richByEn[key] = {
+        en: entry.en,
+        zh: entry.zh || '',
+        pos: entry.pos || '',
+        level: entry.level || 0,
+        ipa_us: '',
+        ipa_uk: '',
+        audio_us: '',
+        audio_uk: '',
+        collocations: [],
+        examples: []
+      };
+    }
+  }
+
+  function getFolderSearchPool() {
+    var pool = (global.allWords || []).slice();
+    var seen = {};
+    pool.forEach(function (w) {
+      seen[w.en.toLowerCase()] = true;
+    });
+    Object.keys(additionalLookup).forEach(function (k) {
+      if (!seen[k]) {
+        seen[k] = true;
+        pool.push(additionalLookup[k]);
+      }
+    });
+    return pool;
+  }
+
   function matchWordFromToken(token) {
     var variants = normalizeToken(token);
     for (var i = 0; i < variants.length; i++) {
-      var hit = enLookup[variants[i]];
+      var hit = lookupWordEntry(variants[i]);
       if (hit) return hit;
     }
     return null;
@@ -562,6 +963,12 @@
     var ta = document.getElementById('examImportText');
     var resultEl = document.getElementById('examImportResult');
     if (!ta) return;
+    loadAdditionalLookup().finally(function () {
+      importExamTextCore(ta, resultEl);
+    });
+  }
+
+  function importExamTextCore(ta, resultEl) {
     var parsed = parseExamText(ta.value);
     if (!parsed.matched.length) {
       if (resultEl) resultEl.innerHTML = '<span style="color:var(--unknown)">找不到可對應的單字，請確認格式（每行一個英文單字）</span>';
@@ -1314,6 +1721,7 @@
     patchExport();
     patchDailyGoal();
     patchNavigation();
+    patchFolderSearch();
     global.buildDailyTasks = buildDailyTasks;
     global.VF_showWordCard = showWordCard;
     global.VF_closeWordCard = closeWordCard;
