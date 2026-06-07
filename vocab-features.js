@@ -142,6 +142,13 @@
       '.word-card-ex-zh{font-size:.82rem;color:var(--text2);margin-top:4px;line-height:1.5;}',
       '.wc-vocab-link{color:var(--accent);text-decoration:underline;text-decoration-style:solid;text-underline-offset:2px;cursor:pointer;font-weight:600;}',
       '.wc-vocab-link:hover{color:#fff;background:rgba(99,102,241,.25);border-radius:3px;}',
+      '.wc-word-pop{position:fixed;z-index:320;display:none;min-width:160px;max-width:min(280px,88vw);background:var(--surface);border:2px solid var(--accent);border-radius:12px;padding:12px 14px;box-shadow:0 10px 32px rgba(0,0,0,.45);}',
+      '.wc-word-pop.show{display:block;}',
+      '.wc-word-pop-close{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--text2);font-size:.9rem;cursor:pointer;padding:2px 6px;}',
+      '.wc-word-pop-en{font-size:1.05rem;font-weight:800;color:var(--text);padding-right:22px;line-height:1.3;}',
+      '.wc-word-pop-meta{font-size:.74rem;color:var(--accent);margin-top:4px;}',
+      '.wc-word-pop-zh{font-size:.9rem;color:var(--text);margin-top:6px;line-height:1.45;}',
+      '.wc-word-pop-tag{display:inline-block;font-size:.62rem;color:var(--warn);border:1px solid var(--warn);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle;}',
       '.word-card-empty{font-size:.82rem;color:var(--text2);font-style:italic;}'
     ].join('\n');
     document.head.appendChild(st);
@@ -374,7 +381,7 @@
       html +=
         '<span class="wc-vocab-link" role="button" tabindex="0" data-en="' +
         esc(lk.en) +
-        '" onclick="event.stopPropagation();VF_showWordCard(this.getAttribute(\'data-en\'))">' +
+        '" onclick="VF_showWordPop(this.getAttribute(\'data-en\'), event)">' +
         esc(lk.text) +
         '</span>';
       pos = lk.end;
@@ -716,7 +723,88 @@
     });
   }
 
+  var _wordPopDocHandler = null;
+
+  function ensureWordPopEl() {
+    var pop = document.getElementById('wcWordPop');
+    if (pop) return pop;
+    pop = document.createElement('div');
+    pop.id = 'wcWordPop';
+    pop.className = 'wc-word-pop';
+    pop.onclick = function (e) {
+      e.stopPropagation();
+    };
+    document.body.appendChild(pop);
+    return pop;
+  }
+
+  function hideWordPop() {
+    var pop = document.getElementById('wcWordPop');
+    if (pop) pop.classList.remove('show');
+    if (_wordPopDocHandler) {
+      document.removeEventListener('mousedown', _wordPopDocHandler, true);
+      _wordPopDocHandler = null;
+    }
+  }
+
+  function positionWordPop(pop, evt) {
+    pop.style.left = '0px';
+    pop.style.top = '0px';
+    pop.style.visibility = 'hidden';
+    pop.classList.add('show');
+    var rect = pop.getBoundingClientRect();
+    var pad = 10;
+    var x = evt && typeof evt.clientX === 'number' ? evt.clientX : window.innerWidth / 2;
+    var y = evt && typeof evt.clientY === 'number' ? evt.clientY : window.innerHeight / 2;
+    var left = x + pad;
+    var top = y + pad;
+    if (left + rect.width > window.innerWidth - pad) left = Math.max(pad, x - rect.width - pad);
+    if (top + rect.height > window.innerHeight - pad) top = Math.max(pad, y - rect.height - pad);
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+    pop.style.visibility = 'visible';
+  }
+
+  function showWordPop(en, evt) {
+    if (evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+    hideWordPop();
+    loadAdditionalLookup().finally(function () {
+      var w = lookupWordEntry(en) || { en: en, zh: '', pos: '' };
+      var pop = ensureWordPopEl();
+      var tag = w._additional ? '<span class="wc-word-pop-tag">補充字</span>' : '';
+      var zh = firstZh(w.zh) || '（尚無中文資料）';
+      pop.innerHTML =
+        '<button type="button" class="wc-word-pop-close" aria-label="關閉">✕</button>' +
+        '<div class="wc-word-pop-en">' +
+        esc(w.en || en) +
+        tag +
+        '</div>' +
+        (w.pos ? '<div class="wc-word-pop-meta">' + esc(w.pos) + '</div>' : '') +
+        '<div class="wc-word-pop-zh">' +
+        esc(zh) +
+        '</div>';
+      pop.querySelector('.wc-word-pop-close').onclick = function (e) {
+        e.stopPropagation();
+        hideWordPop();
+      };
+      positionWordPop(pop, evt);
+      _wordPopDocHandler = function (e) {
+        var node = document.getElementById('wcWordPop');
+        if (!node || !node.classList.contains('show')) return;
+        if (node.contains(e.target) || (e.target.closest && e.target.closest('.wc-vocab-link'))) return;
+        hideWordPop();
+      };
+      setTimeout(function () {
+        document.addEventListener('mousedown', _wordPopDocHandler, true);
+      }, 0);
+    });
+  }
+
   function showWordCard(en) {
+    hideWordPop();
     ensureRichForWord(en, function () {
       var base = enLookup[String(en).toLowerCase()] || { en: en, zh: '', pos: '', level: 0 };
       var rich = getRich(en);
@@ -831,6 +919,7 @@
   }
 
   function closeWordCard() {
+    hideWordPop();
     var ov = document.getElementById('wordCardOverlay');
     if (ov) ov.classList.remove('show');
   }
@@ -1724,7 +1813,9 @@
     patchFolderSearch();
     global.buildDailyTasks = buildDailyTasks;
     global.VF_showWordCard = showWordCard;
+    global.VF_showWordPop = showWordPop;
     global.VF_closeWordCard = closeWordCard;
+    global.VF_hideWordPop = hideWordPop;
     global.VF_importExamText = importExamText;
     global.VF_clearExamImport = clearExamImport;
   }
