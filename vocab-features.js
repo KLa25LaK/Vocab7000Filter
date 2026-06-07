@@ -1225,38 +1225,30 @@
   }
 
   function updateTodayProgressUI() {
-    var el = document.getElementById('vfTodayProgress');
-    if (!el) return;
     var done = getTodayWordCount();
     var pos = getRoundPosition(done);
-    el.textContent = '今日 ' + done + ' 字 · 這組 ' + pos + '/' + DAILY_GOAL_TARGET;
+    var text = '今日 ' + done + ' 字 · 這組 ' + pos + '/' + DAILY_GOAL_TARGET;
+    document.querySelectorAll('.vf-today-progress').forEach(function (el) {
+      el.textContent = text;
+    });
   }
 
   function injectTodayProgressUI() {
-    if (document.getElementById('vfTodayProgress')) return;
-    var targets = ['.scan-header', '#drill .drill-header', '#reviewTest .review-test-header', '#folderDrill .drill-header'];
-    targets.forEach(function (sel) {
-      var host = document.querySelector(sel);
-      if (!host || host.querySelector('.vf-today-progress')) return;
+    var slots = [
+      { header: '.scan-header', id: 'vfTodayProgress' },
+      { header: '#drill .drill-header', id: 'vfTodayProgress_drill' },
+      { header: '#folderDrill .drill-header', id: 'vfTodayProgress_folder' },
+      { header: '#reviewTest .review-test-header', id: 'vfTodayProgress_review' }
+    ];
+    slots.forEach(function (slot) {
+      if (document.getElementById(slot.id)) return;
+      var header = document.querySelector(slot.header);
+      if (!header) return;
       var el = document.createElement('div');
-      el.id = sel.indexOf('scan') >= 0 ? 'vfTodayProgress' : 'vfTodayProgress_' + sel.replace(/[^a-z]/gi, '');
-      if (sel === '.scan-header') el.id = 'vfTodayProgress';
+      el.id = slot.id;
       el.className = 'vf-today-progress';
-      el.style.cssText =
-        'width:100%;text-align:center;font-size:.76rem;color:var(--text2);margin:4px 0 2px;font-weight:600;';
-      host.appendChild(el);
+      header.insertAdjacentElement('afterend', el);
     });
-    if (!document.getElementById('vfTodayProgress')) {
-      var scanHeader = document.querySelector('.scan-header');
-      if (scanHeader) {
-        var el2 = document.createElement('div');
-        el2.id = 'vfTodayProgress';
-        el2.className = 'vf-today-progress';
-        el2.style.cssText =
-          'width:100%;text-align:center;font-size:.76rem;color:var(--text2);margin:4px 0 2px;font-weight:600;';
-        scanHeader.appendChild(el2);
-      }
-    }
     updateTodayProgressUI();
   }
 

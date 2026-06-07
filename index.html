@@ -198,9 +198,13 @@ h1 span{color:var(--accent)}
 .nb-empty{text-align:center;color:var(--text2);padding:40px 20px;font-size:.95rem}
 
 /* ── DRILL ── */
-.drill-header{width:100%;display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.drill-header h2{font-size:1.2rem;font-weight:700;flex:1}
-.drill-counter{font-size:.85rem;color:var(--text2)}
+.drill-header{width:100%;display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:nowrap;}
+.drill-header h2{font-size:clamp(.92rem,3.8vw,1.2rem);font-weight:700;flex:1 1 auto;min-width:0;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.drill-counter{font-size:.85rem;color:var(--text2);white-space:nowrap;flex:0 0 auto;}
+.folder-drill-toolbar{width:100%;display:none;gap:8px;margin-bottom:10px;}
+.folder-drill-toolbar.show{display:flex;}
+.folder-drill-toolbar .floating-act-btn{position:static;flex:1;min-width:0;border-radius:10px;padding:10px 12px;font-size:clamp(.76rem,3.2vw,.88rem);box-shadow:none;text-align:center;}
+#folderDrill.screen.active{padding-bottom:calc(var(--nav-h) + 8px);}
 .drill-card{width:100%;background:var(--surface);border-radius:20px;padding:28px 22px;margin-bottom:16px;border:2px solid var(--border);text-align:center}
 .drill-en{font-size:clamp(1.5rem,5.5vw,2rem);font-weight:800;margin-bottom:6px;line-height:1.2;}
 .drill-en.is-zh{font-size:clamp(1.25rem,4.5vw,1.65rem);}
@@ -361,34 +365,55 @@ body.scan-active .global-nav{display:none;}
   display:flex;flex-direction:column;overflow:hidden;z-index:90;background:var(--bg);
 }
 .scan-top{flex:0 0 auto;width:100%;}
-.scan-top .scan-card{margin-bottom:8px;}
-.scan-top .stats-row{margin-bottom:8px;}
-.scan-top .stat-chip .val{font-size:var(--fs-xl);}
-.scan-opts-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;width:100%;padding:2px 0 6px;}
+.scan-top .scan-card{margin-bottom:6px;padding:10px 14px 8px;}
+.scan-top .stats-row{margin-bottom:6px;}
+.scan-top .stat-chip{padding:6px 10px;}
+.scan-top .stat-chip .val{font-size:clamp(1.05rem,4.5vw,1.35rem);}
+.scan-top .stat-chip .lbl{font-size:clamp(.68rem,2.8vw,.78rem);}
+.scan-top .word-en{font-size:clamp(1.2rem,4.8vw,1.65rem);}
+.scan-top .word-pos{font-size:clamp(.72rem,2.8vw,.82rem);margin-bottom:8px;}
+.scan-opts-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;width:100%;padding:2px 0 10px;}
+.scan-opts-scroll .quiz-label{font-size:clamp(.82rem,3.2vw,.95rem);margin-bottom:5px;}
 .scan-quiz-area{width:100%;}
 .scan-quiz-area:not(.show){display:none;}
 .scan-quiz-area.show{display:block;}
 .quiz-options-list{display:flex;flex-direction:column;gap:6px;width:100%;}
 .scan-actions{
-  flex:0 0 auto;width:100%;padding:8px 0 max(10px,env(safe-area-inset-bottom,8px));
+  flex:0 0 auto;width:100%;padding:6px 0 max(8px,env(safe-area-inset-bottom,6px));
   background:var(--bg);border-top:1px solid var(--border);
-  box-shadow:0 -10px 28px rgba(15,17,23,.92);
+  box-shadow:0 -8px 20px rgba(15,17,23,.88);
 }
-.scan-actions .action-row{margin-bottom:4px;}
-.scan-hint{text-align:center;color:var(--text2);line-height:1.35;font-size:var(--fs-xs);}
-.scan-header{display:flex;align-items:center;gap:8px;width:100%;margin-bottom:6px;}
-.scan-exit-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:6px 12px;font-size:var(--fs-sm);font-weight:600;cursor:pointer;flex-shrink:0;}
+.scan-actions .action-row{margin-bottom:2px;align-items:stretch;gap:8px;}
+.scan-actions .action-btn{min-height:46px;padding:10px 8px;font-size:clamp(.88rem,3.6vw,1.05rem);}
+.scan-actions .action-btn .kb{display:none;}
+.scan-side-actions{display:flex;flex-direction:column;gap:6px;flex:0 0 44px;}
+.scan-icon-btn{
+  flex:1;min-height:0;background:var(--surface2);border:2px solid var(--border);color:var(--text2);
+  border-radius:12px;padding:0;font-size:1.05rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.scan-icon-btn:hover{border-color:var(--accent);color:var(--accent);}
+.scan-icon-btn.home-btn{border-color:var(--accent);color:var(--accent);}
+.scan-hint{text-align:center;color:var(--text2);line-height:1.3;font-size:clamp(.66rem,2.6vw,.74rem);margin:0;}
+.scan-header{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;width:100%;margin-bottom:2px;}
+.scan-exit-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:5px 10px;font-size:clamp(.76rem,3vw,.88rem);font-weight:600;cursor:pointer;}
 .scan-exit-btn:hover{border-color:var(--accent);color:var(--text);}
-.scan-progress-label{flex:1;text-align:center;font-size:var(--fs-sm);color:var(--text2);font-weight:600;}
+.scan-progress-label{min-width:0;text-align:left;font-size:clamp(.76rem,3.1vw,.9rem);color:var(--text2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vf-today-progress{width:100%;text-align:right;font-size:clamp(.68rem,2.8vw,.76rem);color:var(--text2);margin:0 0 5px;font-weight:600;white-space:nowrap;}
 .stat-chip.clickable{cursor:pointer;}
 .stat-chip.clickable:hover{filter:brightness(1.08);}
 @media (min-width:600px){
   html{font-size:17px;}
   .nb-tab{font-size:var(--fs-md);padding:10px 14px;}
 }
+@media (max-width:520px){
+  .quiz-opt,.drill-opt{font-size:clamp(.9rem,3.6vw,1.08rem);font-weight:600;min-height:44px;padding:10px 12px;line-height:1.35;}
+  .quiz-options-list{gap:5px;}
+  .scan-top .scan-card .speak-btn{font-size:clamp(.68rem,2.6vw,.76rem);padding:4px 10px;}
+}
 @media (max-width:380px){
-  .scan-top .word-en{font-size:clamp(1.35rem,5vw,1.75rem);}
-  .quiz-opt,.drill-opt{font-size:clamp(1.05rem,4.8vw,1.28rem);padding:13px 14px;}
+  .scan-top .word-en{font-size:clamp(1.1rem,4.5vw,1.45rem);}
+  .quiz-opt,.drill-opt{font-size:clamp(.86rem,3.4vw,1rem);padding:9px 11px;min-height:42px;}
+  .scan-actions .action-btn{font-size:clamp(.82rem,3.2vw,.95rem);min-height:42px;}
 }
 /* ── 學生身分 / 登入 ── */
 .student-gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:350;padding:20px;}
@@ -609,7 +634,10 @@ body.scan-active .global-nav{display:none;}
       <button class="action-btn know-btn" id="knowBtn" onclick="markKnow()" style="flex-direction:row;gap:4px;">
         ✅ 我會測我 <span class="kb" style="opacity:.6;">[Z]</span>
       </button>
-      <button class="action-btn notebook-btn" onclick="gotoNotebookFromScan()" title="錯題本" style="flex:0 0 48px;font-size:1.15rem;">📖</button>
+      <div class="scan-side-actions">
+        <button type="button" class="scan-icon-btn home-btn" onclick="scanGoHome()" title="回主頁">🏠</button>
+        <button type="button" class="scan-icon-btn" onclick="gotoNotebookFromScan()" title="錯題本">📖</button>
+      </div>
     </div>
     <p class="scan-hint">憑記憶答不出來、看了選項才知道的 = 不會</p>
   </div>
@@ -808,8 +836,18 @@ body.scan-active .global-nav{display:none;}
 <!-- ══ FOLDER DRILL ══ -->
 <div id="folderDrill" class="screen">
   <div class="drill-header">
-    <h2 id="folderDrillTitle" style="font-size:1.1rem;">資料夾練習</h2>
+    <h2 id="folderDrillTitle">資料夾練習</h2>
     <span class="drill-counter" id="folderDrillCtr"></span>
+  </div>
+  <div class="folder-drill-toolbar" id="folderDrillToolbar">
+    <button id="folderDrillWrongBtn" type="button" class="floating-act-btn" onclick="folderDrillGoWrong()"
+      style="background:#2a1a1a;color:var(--unknown);border:2px solid var(--unknown);">
+      📖 錯題列表
+    </button>
+    <button id="folderDrillViewBtn" type="button" class="floating-act-btn" onclick="folderDrillGoView()"
+      style="background:var(--surface);color:var(--text);border:2px solid var(--border);">
+      📋 單字表
+    </button>
   </div>
   <div class="prog-wrap"><div class="prog-fill" id="folderDrillProg" style="width:0%"></div></div>
   <div class="quiz-timer-wrap" id="folderDrillTimerWrap" style="display:none;margin-bottom:10px;">
@@ -825,14 +863,6 @@ body.scan-active .global-nav{display:none;}
   <div class="drill-feedback" id="folderDrillFb"></div>
   <button class="drill-next" id="folderDrillNext" onclick="nextFolderDrill()" style="display:none">下一題 →</button>
 </div>
-<button id="folderDrillWrongBtn" type="button" class="floating-act-btn" onclick="folderDrillGoWrong()"
-  style="display:none;bottom:196px;left:16px;background:#2a1a1a;color:var(--unknown);border:2px solid var(--unknown);">
-  📖 錯題
-</button>
-<button id="folderDrillViewBtn" type="button" class="floating-act-btn" onclick="folderDrillGoView()"
-  style="display:none;bottom:136px;left:16px;background:var(--surface);color:var(--text);border:2px solid var(--border);">
-  📋 單字表
-</button>
 
 <!-- ══ FOLDER DRILL RESULT ══ -->
 <div id="folderDrillResult" class="screen">
@@ -1376,13 +1406,14 @@ function updateGnavNBBadge(){
 function updateFolderDrillFloatBtns(){
   var v=document.getElementById('folderDrillViewBtn');
   var w=document.getElementById('folderDrillWrongBtn');
+  var bar=document.getElementById('folderDrillToolbar');
   if(!v||!w)return;
   if(!activeFolderId||activeFolderId==='exam_merged'||!isPresetFolderId(activeFolderId)){
-    v.style.display='none';w.style.display='none';return;
+    if(bar)bar.classList.remove('show');
+    return;
   }
-  v.style.display='block';
+  if(bar)bar.classList.add('show');
   var nb=getFolderNBCount(activeFolderId);
-  w.style.display='block';
   w.textContent='📖 錯題列表'+(nb>0?' '+nb:'');
 }
 function folderDrillGoView(){
@@ -2150,10 +2181,8 @@ function showScreen(id){
 var scanInProgress=false;
 function gotoHome(){
   clearInterval(qTimer);clearFolderDrillTimer();qActive=false;scanInProgress=false;
-  var fv=document.getElementById('folderDrillViewBtn');
-  var fw=document.getElementById('folderDrillWrongBtn');
-  if(fv)fv.style.display='none';
-  if(fw)fw.style.display='none';
+  var bar=document.getElementById('folderDrillToolbar');
+  if(bar)bar.classList.remove('show');
   updateNbReturnScanBtn();
   buildGrid();updateBatchInfo();buildFolderSection();showScreen('home');
 }
@@ -2180,6 +2209,18 @@ function updateScanProgressLabel(){
   if(!queue.length){el.textContent='';return;}
   var cur=Math.min(idx+1,queue.length);
   el.textContent='第 '+cur+' / '+queue.length+' 題';
+}
+function scanGoHome(){
+  clearInterval(qTimer);qActive=false;
+  if(idx>0||counts.know>0||counts.unknown>0){
+    var cur=Math.min(idx,queue.length);
+    showModal('回主頁？','目前進度 '+cur+' / '+queue.length+' 題 · 答對 '+counts.know+' · 錯題 '+counts.unknown+'。\n已記錄的答對／錯題會保留。',
+      [{label:'繼續快篩',cls:'btn-primary',fn:function(){closeModal();qActive=true;}},
+       {label:'回主頁',cls:'btn-secondary',fn:function(){closeModal();scanInProgress=false;gotoHome();}}]);
+    return;
+  }
+  scanInProgress=false;
+  gotoHome();
 }
 function confirmExitScan(){
   clearInterval(qTimer);qActive=false;
